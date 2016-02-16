@@ -1,4 +1,5 @@
 syntax: glob
+src/.vs/*
 src/Ormico.DbPatchManager.Cmd/bin/*
 src/Ormico.DbPatchManager.Cmd/obj/*
 src/Ormico.DbPatchManager/obj/*
