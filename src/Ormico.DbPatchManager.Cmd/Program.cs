@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ormico.DbPatchManager.Cmd.CommandLineOptions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,8 +9,76 @@ namespace Ormico.DbPatchManager.Cmd
 {
     class Program
     {
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
+            int rc = 0;
+            var options = new Options();
+            bool parse = CommandLine.Parser.Default.ParseArguments(args, options, ParseArgs);
+
+            if (!parse)
+            {
+                rc = CommandLine.Parser.DefaultExitCodeFail;
+            }
+            else
+            {
+                rc = _rc;
+            }
+
+            return rc;
         }
+
+        static int _rc = 0;
+
+        static void ParseArgs(string verb, object subOptions)
+        {
+            if (StrEq("init", verb))
+            {
+                _rc = InitBuildSettings(subOptions as InitOptions);
+            }
+            else if (StrEq("addpatch", verb))
+            {
+                _rc = AddPatch(subOptions as AddPatchOptions);
+            }
+            else if (StrEq("build", verb))
+            {
+                _rc = Build(subOptions as BuildOptions);
+            }
+        }
+
+        static bool StrEq(string a, string b)
+        {
+            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static int InitBuildSettings(InitOptions options)
+        {
+            int rc = 0;
+
+            return rc;
+        }
+
+        static int AddPatch(AddPatchOptions options)
+        {
+            int rc = 0;
+
+            return rc;
+        }
+
+        static int Build(BuildOptions options)
+        {
+            int rc = 0;
+
+            return rc;
+        }
+        
+
+        /*
+        int AddPatch(AddPatchOptions options)
+        {
+            int rc = 0;
+
+            return rc;
+        }
+        */
     }
 }
