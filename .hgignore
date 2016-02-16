@@ -2,3 +2,4 @@ syntax: glob
 src/Ormico.DbPatchManager.Cmd/bin/*
 src/Ormico.DbPatchManager.Cmd/obj/*
 src/Ormico.DbPatchManager/obj/*
+src/Ormico.DbPatchManager/bin/*
