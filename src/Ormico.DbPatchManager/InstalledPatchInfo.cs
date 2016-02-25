@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace Ormico.DbPatchManager
 {
-    public class Class1
+    public class InstalledPatchInfo
     {
+        public string Id { get; set; }
+        public DateTime InstalledDate { get; set; }
     }
 }
