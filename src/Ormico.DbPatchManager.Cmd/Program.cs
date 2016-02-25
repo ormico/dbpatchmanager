@@ -53,6 +53,8 @@ namespace Ormico.DbPatchManager.Cmd
         static int InitBuildSettings(InitOptions options)
         {
             int rc = 0;
+            PatchManager manager = new PatchManager(".\\patchManager.json");
+            manager.InitConfig(options);
 
             return rc;
         }
