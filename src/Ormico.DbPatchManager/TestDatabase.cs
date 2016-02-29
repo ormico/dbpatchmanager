@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,6 +12,11 @@ namespace Ormico.DbPatchManager
 
     class TestDatabase : IDatabase
     {
+        /// <summary>
+        /// Use System.IO.Abstraction to make testing easier.
+        /// </summary>
+        FileSystem _io = new FileSystem();
+
         string _fileName;
         TestDb _testDb;
 
@@ -56,9 +61,9 @@ namespace Ormico.DbPatchManager
 
         void Load()
         {
-            if(File.Exists(_fileName))
+            if(_io.File.Exists(_fileName))
             {
-                _testDb = JsonConvert.DeserializeObject<TestDb>(File.ReadAllText(_fileName));
+                _testDb = JsonConvert.DeserializeObject<TestDb>(_io.File.ReadAllText(_fileName));
             }
             else
             {
@@ -68,7 +73,7 @@ namespace Ormico.DbPatchManager
 
         void Save()
         {
-            File.WriteAllText(_fileName, JsonConvert.SerializeObject(_testDb));
+            _io.File.WriteAllText(_fileName, JsonConvert.SerializeObject(_testDb));
         }
 
         class TestDb
