@@ -21,7 +21,7 @@ namespace Ormico.DbPatchManager
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
-        FileSystem _fileSystem = new FileSystem();
+        FileSystem _io = new FileSystem();
 
         /// <summary>
         /// Path and name of file to read and write.
@@ -35,17 +35,21 @@ namespace Ormico.DbPatchManager
         public DatabaseBuildConfiguration Read()
         {
             DatabaseBuildConfiguration rc = null;
-            if(_fileSystem.File.Exists(_filePath))
+            if(_io.File.Exists(_filePath))
             {
-                rc = JsonConvert.DeserializeObject<DatabaseBuildConfiguration>(_fileSystem.File.ReadAllText(_filePath));
+                rc = JsonConvert.DeserializeObject<DatabaseBuildConfiguration>(_io.File.ReadAllText(_filePath));
             }
             return rc;
         }
 
         public void Write(DatabaseBuildConfiguration buildConfiguration)
         {
-            string data = JsonConvert.SerializeObject(buildConfiguration);
-            _fileSystem.File.WriteAllText(_filePath, data);
+            JsonSerializerSettings settings = new JsonSerializerSettings()
+            {
+                ReferenceResolverProvider = () => new PatchIdReferenceResolver()
+            };
+            string data = JsonConvert.SerializeObject(buildConfiguration, Formatting.Indented, settings);
+            _io.File.WriteAllText(_filePath, data);
         }
     }
 }
