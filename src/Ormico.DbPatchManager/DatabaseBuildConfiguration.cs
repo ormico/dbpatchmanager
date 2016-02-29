@@ -17,5 +17,13 @@ namespace Ormico.DbPatchManager
         public string CodeFolder { get; set; }
 
         public List<Patch> patches { get; set; }
+
+        public List<Patch> GetOpenPatches()
+        {
+            var rc = from p in patches
+                             where p.DependsOn == null || p.DependsOn.Count() > 0
+                             select p;
+            return rc.ToList();
+        }
     }
 }
