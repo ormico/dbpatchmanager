@@ -8,6 +8,11 @@ namespace Ormico.DbPatchManager
 {
     public class DatabaseBuildConfiguration
     {
+        public DatabaseBuildConfiguration()
+        {
+            patches = new List<Patch>();
+        }
+
         public string DatabaseType { get; set; }
 
         public string ConnectionString { get; set; }
