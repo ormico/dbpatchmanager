@@ -43,6 +43,11 @@ namespace Ormico.DbPatchManager.Cmd
             {
                 _rc = Build(subOptions as BuildOptions);
             }
+            else
+            {
+                //todo: create custom exception
+                throw new ApplicationException(string.Format("Unknown command '{0}'", verb));
+            }
         }
 
         static bool StrEq(string a, string b)
@@ -62,7 +67,10 @@ namespace Ormico.DbPatchManager.Cmd
         static int AddPatch(AddPatchOptions options)
         {
             int rc = 0;
-
+            PatchManager manager = new PatchManager(".\\patchManager.json");
+            manager.AddPatch(options.Name, new PatchOptions()
+            {
+            });
             return rc;
         }
 
