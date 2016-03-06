@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 namespace Ormico.DbPatchManager
 {
+    [JsonObject(IsReference = true)]
     public class Patch
     {
         public Patch()
@@ -19,12 +20,12 @@ namespace Ormico.DbPatchManager
         //todo: constructor for json.net
 
         [JsonProperty("id")]
-        public string Id { get; protected set; }
+        public string Id { get; /* protected */ set; }
 
-        [JsonProperty("dependsOn")]
-        public List<Patch> DependsOn { get; protected set; }
+        [JsonProperty("dependsOn", ItemIsReference = true)]
+        public List<Patch> DependsOn { get; /* protected */ set; }
 
         [JsonIgnore]
-        public List<Patch> Children { get; protected set; }
+        public List<Patch> Children { get; /* protected */ set; }
     }
 }
