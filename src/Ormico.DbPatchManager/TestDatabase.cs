@@ -24,7 +24,7 @@ namespace Ormico.DbPatchManager
         {
             DbConnectionStringBuilder csb = new DbConnectionStringBuilder();
             csb.ConnectionString = ConnectionString;
-            _fileName = csb["FileName"] as string;
+            _fileName = csb["File"] as string;
 
             Load();
         }
@@ -73,7 +73,7 @@ namespace Ormico.DbPatchManager
 
         void Save()
         {
-            _io.File.WriteAllText(_fileName, JsonConvert.SerializeObject(_testDb));
+            _io.File.WriteAllText(_fileName, JsonConvert.SerializeObject(_testDb, Formatting.Indented));
         }
 
         class TestDb
