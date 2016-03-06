@@ -77,7 +77,8 @@ namespace Ormico.DbPatchManager.Cmd
         static int Build(BuildOptions options)
         {
             int rc = 0;
-
+            PatchManager manager = new PatchManager(".\\patchManager.json");
+            manager.Build();
             return rc;
         }
         
