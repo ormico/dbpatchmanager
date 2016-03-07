@@ -101,17 +101,11 @@ namespace Ormico.DbPatchManager
 
                     //todo: log or console first patch
                     InstallPatch(first, db, installedPatches);
-
-                    foreach(Patch child in first.Children)
-                    {
-                        InstallPatch(child, db, installedPatches);
-                    }
-
                 }
             }
         }
 
-        private void InstallPatch(Patch patch, TestDatabase db, List<InstalledPatchInfo> installedPatches)
+        private void InstallPatch(Patch patch, IDatabase db, List<InstalledPatchInfo> installedPatches)
         {
             bool isInstalled = installedPatches.Any(i => string.Equals(i.Id, patch.Id));
 
@@ -119,38 +113,43 @@ namespace Ormico.DbPatchManager
             if (!isInstalled)
             {
                 // make sure all dependencies are installed
-
-                
-                bool dependenciesInstalled = installedPatches.All
-                    (
-                        i => patch.DependsOn == null || patch.DependsOn.Any
-                            (
-                                d => string.Equals(d.Id, i.Id)
-                            )
-                    );
-
-                if (!_io.Directory.Exists(patch.Id))
+                if (patch.DependsOn != null)
                 {
-                    throw new ApplicationException(string.Format("Patch folder '{0}' missing.", patch.Id));
-                }
-                else
-                {
-                    var files = _io.Directory.GetFiles(patch.Id);
-                    foreach (var file in files)
+                    foreach (Patch dependency in patch.DependsOn)
                     {
-                        var ext = _io.Path.GetExtension(file);
-                        if (string.Equals(ext, "sql", StringComparison.OrdinalIgnoreCase))
-                        {
-                            //todo: check file size before reading all text
-                            string sql = _io.File.ReadAllText(file);
-                            db.ExecuteDDL(sql);
-                        }
-                        else if (string.Equals(ext, "js", StringComparison.OrdinalIgnoreCase))
-                        {
-
-                        }
+                        InstallPatch(dependency, db, installedPatches);
                     }
-                    db.LogInstalledPatch(patch.Id);
+                }
+                
+                // check again if patch is installed
+                // it might have been installed when installing dependencies
+                isInstalled = installedPatches.Any(i => string.Equals(i.Id, patch.Id));
+                if(!isInstalled)
+                {
+                    if (!_io.Directory.Exists(patch.Id))
+                    {
+                        throw new ApplicationException(string.Format("Patch folder '{0}' missing.", patch.Id));
+                    }
+                    else
+                    {
+                        var files = _io.Directory.GetFiles(patch.Id);
+                        foreach (var file in files)
+                        {
+                            var ext = _io.Path.GetExtension(file);
+                            if (string.Equals(ext, "sql", StringComparison.OrdinalIgnoreCase))
+                            {
+                                //todo: check file size before reading all text
+                                string sql = _io.File.ReadAllText(file);
+                                db.ExecuteDDL(sql);
+                            }
+                            else if (string.Equals(ext, "js", StringComparison.OrdinalIgnoreCase))
+                            {
+
+                            }
+                        }
+                        db.LogInstalledPatch(patch.Id);
+                        installedPatches.Add(new InstalledPatchInfo() { Id = patch.Id, InstalledDate = DateTime.Now });
+                    }
                 }
             }
             else
