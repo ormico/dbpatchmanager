@@ -100,7 +100,91 @@ namespace Ormico.DbPatchManager
                     var installedPatches = db.GetInstalledPatches();
 
                     //todo: log or console first patch
-                    InstallPatch(first, db, installedPatches);
+                    //InstallPatch(first, db, installedPatches);
+                    InstallPatch2(first, db, installedPatches);
+                }
+            }
+        }
+
+        private void InstallPatch2(Patch patch, IDatabase db, List<InstalledPatchInfo> installedPatches)
+        {
+            LinkedList<Patch> graph = new LinkedList<Patch>();
+            graph.AddLast(patch);
+            bool isInstalled;
+            Patch current;
+
+            while (graph.Count() > 0)
+            {
+                current = graph.First.Value;
+                graph.RemoveFirst();
+                isInstalled = installedPatches.Any(i => string.Equals(i.Id, current.Id));
+
+                // make sure patch isn't already installed
+                if (!isInstalled)
+                {
+                    List<Patch> notInstalledDependencies = new List<Patch>();
+                    // make sure all dependencies are installed
+                    if (current.DependsOn != null)
+                    {
+                        // check each dependency and see if it is already installed
+                        // add not installed dependencies to a list
+                        bool isDepInstalled;
+                        foreach (Patch dependency in current.DependsOn)
+                        {
+                            isDepInstalled = installedPatches.Any(i => string.Equals(i.Id, dependency.Id));
+                            if(!isDepInstalled)
+                            {
+                                notInstalledDependencies.Add(dependency);
+                            }
+                        }
+                    }
+
+                    if(notInstalledDependencies.Count() > 0)
+                    {
+                        // if there are dependencies to install
+                        // put current back on stack and put dependencies on stack
+                        // and return to top of loop
+                        graph.AddFirst(current);
+                        foreach(var d in notInstalledDependencies)
+                        {
+                            graph.AddFirst(d);
+                        }
+                    }
+                    else
+                    {
+                        // if there are no dependencies and patch is not installed then install it
+                        if (!_io.Directory.Exists(current.Id))
+                        {
+                            throw new ApplicationException(string.Format("Patch folder '{0}' missing.", current.Id));
+                        }
+                        else
+                        {
+                            var files = _io.Directory.GetFiles(current.Id);
+                            foreach (var file in files)
+                            {
+                                var ext = _io.Path.GetExtension(file);
+                                if (string.Equals(ext, "sql", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    //todo: check file size before reading all text
+                                    string sql = _io.File.ReadAllText(file);
+                                    db.ExecuteDDL(sql);
+                                }
+                                else if (string.Equals(ext, "js", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    //todo: run javascript patch
+                                }
+                            }
+                            db.LogInstalledPatch(current.Id);
+                            installedPatches.Add(new InstalledPatchInfo() { Id = current.Id, InstalledDate = DateTime.Now });
+
+                            // add children of current
+                            foreach(var c in current.Children)
+                            {
+                                graph.AddLast(c);
+                            }
+                        }
+
+                    }
                 }
             }
         }
