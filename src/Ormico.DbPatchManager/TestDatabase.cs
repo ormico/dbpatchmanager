@@ -36,7 +36,7 @@ namespace Ormico.DbPatchManager
 
         public List<InstalledPatchInfo> GetInstalledPatches()
         {
-            List<InstalledPatchInfo> rc = _testDb.InstalledPatches;
+            List<InstalledPatchInfo> rc = new List<InstalledPatchInfo>(_testDb.InstalledPatches);
             return rc;
         }
 
