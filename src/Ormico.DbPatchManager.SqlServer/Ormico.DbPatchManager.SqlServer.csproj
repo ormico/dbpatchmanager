@@ -66,7 +66,9 @@
   <ItemGroup>
     <EmbeddedResource Include="SqlScripts\GetInstalledPatches.sql" />
     <EmbeddedResource Include="SqlScripts\AddInstalledPatch.sql" />
-    <EmbeddedResource Include="SqlScripts\CreatePatchTable.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="SqlScripts\InitPatchTable.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
