@@ -1,4 +1,5 @@
-﻿using Microsoft.SqlServer.Management.Common;
+﻿using Dapper;
+using Microsoft.SqlServer.Management.Common;
 using Microsoft.SqlServer.Management.Smo;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,7 @@ namespace Ormico.DbPatchManager.SqlServer
             _con = new SqlConnection(ConnectionString);
             _con.Open();
 
+            //todo: change database
             //if (changeDatabase)
             //{
             //    _con.ChangeDatabase(this.Database);
@@ -25,18 +27,22 @@ namespace Ormico.DbPatchManager.SqlServer
 
             _server = new Server(new ServerConnection(_con));
             _server.ConnectionContext.StatementTimeout = 0;
+            InitPatchTable();
         }
 
         SqlConnection _con;
         Server _server;
 
         Lazy<string> _sqlAddInstalledPatch = new Lazy<string>(() => GetEmbededSql("Ormico.DbPatchManager.SqlServer.SqlScripts.AddInstalledPatch.sql"));
-        Lazy<string> _sqlCreatePatchTable = new Lazy<string>(() => GetEmbededSql("Ormico.DbPatchManager.SqlServer.SqlScripts.CreatePatchTable.sql"));
+        Lazy<string> _sqlInitPatchTable = new Lazy<string>(() => GetEmbededSql("Ormico.DbPatchManager.SqlServer.SqlScripts.InitPatchTable.sql"));
         Lazy<string> _sqlGetInstalledPatches = new Lazy<string>(() => GetEmbededSql("Ormico.DbPatchManager.SqlServer.SqlScripts.GetInstalledPatches.sql"));
 
         public void Dispose()
         {
-            _con.Dispose();
+            if(_con != null)
+            {
+                _con.Dispose();
+            }
         }
 
         public void ExecuteDDL(string commandText)
@@ -46,12 +52,23 @@ namespace Ormico.DbPatchManager.SqlServer
 
         public List<InstalledPatchInfo> GetInstalledPatches()
         {
-            throw new NotImplementedException();
+            //todo: test if patch table exists
+            List<InstalledPatchInfo> rc = _con.Query<InstalledPatchInfo>(_sqlAddInstalledPatch.Value, null).ToList();
+            return rc;
         }
 
         public void LogInstalledPatch(string versionID)
         {
-            throw new NotImplementedException();
+            _con.Execute(_sqlAddInstalledPatch.Value,
+                new
+                {
+                    VersionId = versionID
+                }, commandType: System.Data.CommandType.Text);
+        }
+
+        void InitPatchTable()
+        {
+            ExecuteDDL(_sqlInitPatchTable.Value);
         }
 
         public static string GetEmbededSql(string fileName)
@@ -65,6 +82,5 @@ namespace Ormico.DbPatchManager.SqlServer
         
             return rc;
         }
-
     }
 }
