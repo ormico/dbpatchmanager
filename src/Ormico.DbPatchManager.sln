@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ormico.DbPatchManager.Cmd",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ormico.DbPatchManager", "Ormico.DbPatchManager\Ormico.DbPatchManager.csproj", "{A5D3ED96-FF35-4D92-82A6-39E84D22F8F2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ormico.DbPatchManager.SqlServer", "Ormico.DbPatchManager.SqlServer\Ormico.DbPatchManager.SqlServer.csproj", "{8203A646-D047-4055-AF07-4334248ACE69}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{A5D3ED96-FF35-4D92-82A6-39E84D22F8F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5D3ED96-FF35-4D92-82A6-39E84D22F8F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5D3ED96-FF35-4D92-82A6-39E84D22F8F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8203A646-D047-4055-AF07-4334248ACE69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8203A646-D047-4055-AF07-4334248ACE69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8203A646-D047-4055-AF07-4334248ACE69}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8203A646-D047-4055-AF07-4334248ACE69}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
