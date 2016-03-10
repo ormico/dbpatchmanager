@@ -52,7 +52,6 @@ namespace Ormico.DbPatchManager.SqlServer
 
         public List<InstalledPatchInfo> GetInstalledPatches()
         {
-            //todo: test if patch table exists
             List<InstalledPatchInfo> rc = _con.Query<InstalledPatchInfo>(_sqlAddInstalledPatch.Value, null).ToList();
             return rc;
         }

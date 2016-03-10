@@ -55,6 +55,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\common\AssemblyInfoCommon.cs">
+      <Link>Properties\AssemblyInfoCommon.cs</Link>
+    </Compile>
     <Compile Include="BuildConfigurationWriter.cs" />
     <Compile Include="DatabaseBuildConfiguration.cs" />
     <Compile Include="IDatabase.cs" />
