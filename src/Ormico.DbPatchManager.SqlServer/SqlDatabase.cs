@@ -52,16 +52,16 @@ namespace Ormico.DbPatchManager.SqlServer
 
         public List<InstalledPatchInfo> GetInstalledPatches()
         {
-            List<InstalledPatchInfo> rc = _con.Query<InstalledPatchInfo>(_sqlAddInstalledPatch.Value, null).ToList();
+            List<InstalledPatchInfo> rc = _con.Query<InstalledPatchInfo>(_sqlGetInstalledPatches.Value, null).ToList();
             return rc;
         }
 
-        public void LogInstalledPatch(string versionID)
+        public void LogInstalledPatch(string patchId)
         {
             _con.Execute(_sqlAddInstalledPatch.Value,
                 new
                 {
-                    VersionId = versionID
+                    PatchId = patchId
                 }, commandType: System.Data.CommandType.Text);
         }
 
