@@ -52,7 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\common\AssemblyInfoCommon.cs">
-      <Link>AssemblyInfoCommon.cs</Link>
+      <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
     <Compile Include="SqlDatabase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
