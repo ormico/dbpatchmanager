@@ -8,7 +8,7 @@ namespace Ormico.DbPatchManager
 {
     public class InstalledPatchInfo
     {
-        public string Id { get; set; }
+        public string PatchId { get; set; }
         public DateTime InstalledDate { get; set; }
     }
 }
