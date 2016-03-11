@@ -43,11 +43,11 @@ namespace Ormico.DbPatchManager
         public void LogInstalledPatch(string patchId)
         {
             if (!_testDb.InstalledPatches
-                .Any(i => string.Equals(i.Id, patchId, StringComparison.OrdinalIgnoreCase)))
+                .Any(i => string.Equals(i.PatchId, patchId, StringComparison.OrdinalIgnoreCase)))
             {
                 _testDb.InstalledPatches.Add(new InstalledPatchInfo()
                 {
-                    Id = patchId,
+                    PatchId = patchId,
                     InstalledDate = DateTime.Now
                 });
             }
