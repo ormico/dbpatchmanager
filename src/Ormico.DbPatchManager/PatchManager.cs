@@ -94,7 +94,10 @@ namespace Ormico.DbPatchManager
             var first = cfg.GetFirstPatch();
             if(first != null)
             {
-                using (var db = new TestDatabase())
+                PluginManager pm = new PluginManager();
+
+                //using (var db = new TestDatabase())
+                using (var db = pm.LoadDatabasePlugin(cfg.DatabaseType))
                 {
                     db.Connect(cfg.ConnectionString);
                     var installedPatches = db.GetInstalledPatches();
@@ -117,7 +120,7 @@ namespace Ormico.DbPatchManager
             {
                 current = graph.First.Value;
                 graph.RemoveFirst();
-                isInstalled = installedPatches.Any(i => string.Equals(i.Id, current.Id));
+                isInstalled = installedPatches.Any(i => string.Equals(i.PatchId, current.Id));
 
                 // make sure patch isn't already installed
                 if (!isInstalled)
@@ -131,7 +134,7 @@ namespace Ormico.DbPatchManager
                         bool isDepInstalled;
                         foreach (Patch dependency in current.DependsOn)
                         {
-                            isDepInstalled = installedPatches.Any(i => string.Equals(i.Id, dependency.Id));
+                            isDepInstalled = installedPatches.Any(i => string.Equals(i.PatchId, dependency.Id));
                             if(!isDepInstalled)
                             {
                                 notInstalledDependencies.Add(dependency);
@@ -175,7 +178,7 @@ namespace Ormico.DbPatchManager
                                 }
                             }
                             db.LogInstalledPatch(current.Id);
-                            installedPatches.Add(new InstalledPatchInfo() { Id = current.Id, InstalledDate = DateTime.Now });
+                            installedPatches.Add(new InstalledPatchInfo() { PatchId = current.Id, InstalledDate = DateTime.Now });
 
                             // add children of current
                             foreach(var c in current.Children)
@@ -191,7 +194,7 @@ namespace Ormico.DbPatchManager
 
         private void InstallPatch(Patch patch, IDatabase db, List<InstalledPatchInfo> installedPatches)
         {
-            bool isInstalled = installedPatches.Any(i => string.Equals(i.Id, patch.Id));
+            bool isInstalled = installedPatches.Any(i => string.Equals(i.PatchId, patch.Id));
 
             // make sure patch isn't already installed
             if (!isInstalled)
@@ -207,7 +210,7 @@ namespace Ormico.DbPatchManager
                 
                 // check again if patch is installed
                 // it might have been installed when installing dependencies
-                isInstalled = installedPatches.Any(i => string.Equals(i.Id, patch.Id));
+                isInstalled = installedPatches.Any(i => string.Equals(i.PatchId, patch.Id));
                 if(!isInstalled)
                 {
                     if (!_io.Directory.Exists(patch.Id))
@@ -232,7 +235,7 @@ namespace Ormico.DbPatchManager
                             }
                         }
                         db.LogInstalledPatch(patch.Id);
-                        installedPatches.Add(new InstalledPatchInfo() { Id = patch.Id, InstalledDate = DateTime.Now });
+                        installedPatches.Add(new InstalledPatchInfo() { PatchId = patch.Id, InstalledDate = DateTime.Now });
                     }
                 }
             }
