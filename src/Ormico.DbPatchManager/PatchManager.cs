@@ -108,20 +108,18 @@ namespace Ormico.DbPatchManager
             {
                 PluginManager pm = new PluginManager();
 
-                //using (var db = new TestDatabase())
                 using (var db = pm.LoadDatabasePlugin(cfg.DatabaseType))
                 {
                     db.Connect(new DatabaseOptions() { ConnectionString = cfg.ConnectionString });
                     var installedPatches = db.GetInstalledPatches();
 
-                    //todo: log or console first patch
-                    //InstallPatch(first, db, installedPatches);
-                    InstallPatch2(first, db, installedPatches);
+                    //todo: add log/console output
+                    InstallPatch(first, db, installedPatches);
                 }
             }
         }
 
-        private void InstallPatch2(Patch patch, IDatabase db, List<InstalledPatchInfo> installedPatches)
+        private void InstallPatch(Patch patch, IDatabase db, List<InstalledPatchInfo> installedPatches)
         {
             LinkedList<Patch> graph = new LinkedList<Patch>();
             graph.AddLast(patch);
@@ -203,64 +201,6 @@ namespace Ormico.DbPatchManager
             }
         }
 
-        private void InstallPatch(Patch patch, IDatabase db, List<InstalledPatchInfo> installedPatches)
-        {
-            bool isInstalled = installedPatches.Any(i => string.Equals(i.PatchId, patch.Id));
-
-            // make sure patch isn't already installed
-            if (!isInstalled)
-            {
-                // make sure all dependencies are installed
-                if (patch.DependsOn != null)
-                {
-                    foreach (Patch dependency in patch.DependsOn)
-                    {
-                        InstallPatch(dependency, db, installedPatches);
-                    }
-                }
-                
-                // check again if patch is installed
-                // it might have been installed when installing dependencies
-                isInstalled = installedPatches.Any(i => string.Equals(i.PatchId, patch.Id));
-                if(!isInstalled)
-                {
-                    if (!_io.Directory.Exists(patch.Id))
-                    {
-                        throw new ApplicationException(string.Format("Patch folder '{0}' missing.", patch.Id));
-                    }
-                    else
-                    {
-                        var files = _io.Directory.GetFiles(patch.Id);
-                        foreach (var file in files)
-                        {
-                            var ext = _io.Path.GetExtension(file);
-                            if (string.Equals(ext, "sql", StringComparison.OrdinalIgnoreCase))
-                            {
-                                //todo: check file size before reading all text
-                                string sql = _io.File.ReadAllText(file);
-                                db.ExecuteDDL(sql);
-                            }
-                            else if (string.Equals(ext, "js", StringComparison.OrdinalIgnoreCase))
-                            {
-
-                            }
-                        }
-                        db.LogInstalledPatch(patch.Id);
-                        installedPatches.Add(new InstalledPatchInfo() { PatchId = patch.Id, InstalledDate = DateTime.Now });
-                    }
-                }
-            }
-            else
-            {
-                //todo: log or console that patch already installed
-            }
-
-            foreach (Patch child in patch.Children)
-            {
-                InstallPatch(child, db, installedPatches);
-            }
-        }
-
         /// <summary>
         /// Create DatabaseOptions object from DatabaseCuildConfiguration and
         /// by checking to see if override files exist.
@@ -273,17 +213,17 @@ namespace Ormico.DbPatchManager
             rc.ConnectionString = cfg.ConnectionString;
             rc.AdditionalOptions = cfg.Options;
 
-            if (_io.File.Exists(AddInstalledPatchFileName))
+            if (_io.File.Exists(_io.Path.Combine(ScriptOverridesFolder, AddInstalledPatchFileName)))
             {
                 rc.AddInstalledPatchSql = _io.File.ReadAllText(AddInstalledPatchFileName);
             }
 
-            if (_io.File.Exists(GetInstalledPatchesFileName))
+            if (_io.File.Exists(_io.Path.Combine(ScriptOverridesFolder, GetInstalledPatchesFileName)))
             {
                 rc.GetInstalledPatchesSql = _io.File.ReadAllText(GetInstalledPatchesFileName);
             }
 
-            if (_io.File.Exists(InitPatchTableFileName))
+            if (_io.File.Exists(_io.Path.Combine(ScriptOverridesFolder, InitPatchTableFileName)))
             {
                 rc.InitPatchTableSql = _io.File.ReadAllText(InitPatchTableFileName);
             }
