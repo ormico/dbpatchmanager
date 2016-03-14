@@ -18,6 +18,11 @@ namespace Ormico.DbPatchManager
             {
                 rc = new TestDatabase();
             }
+            else if (string.Equals(PluginType, "OdbcDatabase", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(PluginType, typeof(OdbcDatabase).ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                rc = new OdbcDatabase();
+            }
             else
             {
                 string[] parts = PluginType.Split(',');
