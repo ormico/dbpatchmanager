@@ -21,6 +21,8 @@ namespace Ormico.DbPatchManager
 
         public string CodeFolder { get; set; }
 
+        public Dictionary<string, string> Options { get; set; }
+
         public List<Patch> patches { get; set; }
 
         public List<Patch> GetOpenPatches()

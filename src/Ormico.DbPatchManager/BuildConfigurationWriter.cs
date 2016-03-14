@@ -45,7 +45,10 @@ namespace Ormico.DbPatchManager
                 rc.ConnectionString = (string)o["ConnectionString"];
                 rc.DatabaseType = (string)o["DatabaseType"];
                 rc.PatchFolder = (string)o["PatchFolder"];
-                
+
+                // options specific to a database plugin
+                rc.Options = o["Options"].ToObject<Dictionary<string, string>>();
+
                 // populate patch list
                 var patches = (from p in o["patches"]
                              select new Patch()
@@ -88,6 +91,7 @@ namespace Ormico.DbPatchManager
                 ConnectionString = buildConfiguration.ConnectionString,
                 CodeFolder = buildConfiguration.CodeFolder,
                 PatchFolder = buildConfiguration.PatchFolder,
+                Options = buildConfiguration.Options,
                 patches = from p in buildConfiguration.patches
                           select new
                           {
