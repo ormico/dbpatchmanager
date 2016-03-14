@@ -19,6 +19,6 @@ namespace Ormico.DbPatchManager
         public string InitPatchTableSql { get; set; }
 
 
-        public Dictionary<string, string> AdditionalOptions { get; protected set; }
+        public Dictionary<string, string> AdditionalOptions { get; set; }
     }
 }

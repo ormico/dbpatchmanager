@@ -31,9 +31,14 @@ namespace Ormico.DbPatchManager
             _io = Io;
         }
 
+        string ScriptOverridesFolder = @"ScriptOverrides";
+        string AddInstalledPatchFileName = "AddInstalledPatch.sql";
+        string GetInstalledPatchesFileName = "GetInstalledPatches.sql";
+        string InitPatchTableFileName = "InitPatchTable.sql";
+
         readonly string _configFileName;
         readonly Random _rand;
-
+        
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
@@ -61,6 +66,9 @@ namespace Ormico.DbPatchManager
             {
                 var cfgWriter = new BuildConfigurationWriter(_configFileName);
                 var cfg = cfgWriter.Read();
+
+                // load options
+                DatabaseOptions dbopt = LoadDatabaseOptions(cfg);
 
                 //create unique id prefix to avoid collisions
                 string prefix = string.Format("{0:yyyyMMddHHmm}-{1:0000}",
@@ -91,6 +99,10 @@ namespace Ormico.DbPatchManager
         {
             var cfgWriter = new BuildConfigurationWriter(_configFileName);
             var cfg = cfgWriter.Read();
+
+            // load options
+            DatabaseOptions dbopt = LoadDatabaseOptions(cfg);
+
             var first = cfg.GetFirstPatch();
             if(first != null)
             {
@@ -247,6 +259,36 @@ namespace Ormico.DbPatchManager
             {
                 InstallPatch(child, db, installedPatches);
             }
+        }
+
+        /// <summary>
+        /// Create DatabaseOptions object from DatabaseCuildConfiguration and
+        /// by checking to see if override files exist.
+        /// </summary>
+        /// <param name="cfg"></param>
+        /// <returns></returns>
+        DatabaseOptions LoadDatabaseOptions(DatabaseBuildConfiguration cfg)
+        {
+            DatabaseOptions rc = new DatabaseOptions();
+            rc.ConnectionString = cfg.ConnectionString;
+            rc.AdditionalOptions = cfg.Options;
+
+            if (_io.File.Exists(AddInstalledPatchFileName))
+            {
+                rc.AddInstalledPatchSql = _io.File.ReadAllText(AddInstalledPatchFileName);
+            }
+
+            if (_io.File.Exists(GetInstalledPatchesFileName))
+            {
+                rc.GetInstalledPatchesSql = _io.File.ReadAllText(GetInstalledPatchesFileName);
+            }
+
+            if (_io.File.Exists(InitPatchTableFileName))
+            {
+                rc.InitPatchTableSql = _io.File.ReadAllText(InitPatchTableFileName);
+            }
+
+            return rc;
         }
     }
 }
