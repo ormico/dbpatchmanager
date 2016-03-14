@@ -99,7 +99,7 @@ namespace Ormico.DbPatchManager
                 //using (var db = new TestDatabase())
                 using (var db = pm.LoadDatabasePlugin(cfg.DatabaseType))
                 {
-                    db.Connect(cfg.ConnectionString);
+                    db.Connect(new DatabaseOptions() { ConnectionString = cfg.ConnectionString });
                     var installedPatches = db.GetInstalledPatches();
 
                     //todo: log or console first patch
