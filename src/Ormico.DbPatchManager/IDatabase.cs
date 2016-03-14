@@ -8,7 +8,7 @@ namespace Ormico.DbPatchManager
 {
     public interface IDatabase: IDisposable
     {
-        void Connect(string ConnectionString);
+        void Connect(DatabaseOptions Options);
 
         void ExecuteDDL(string commandText);
 

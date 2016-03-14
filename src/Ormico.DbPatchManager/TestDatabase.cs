@@ -20,10 +20,10 @@ namespace Ormico.DbPatchManager
         string _fileName;
         TestDb _testDb;
 
-        public void Connect(string ConnectionString)
+        public void Connect(DatabaseOptions Options)
         {
             DbConnectionStringBuilder csb = new DbConnectionStringBuilder();
-            csb.ConnectionString = ConnectionString;
+            csb.ConnectionString = Options.ConnectionString;
             _fileName = csb["File"] as string;
 
             Load();

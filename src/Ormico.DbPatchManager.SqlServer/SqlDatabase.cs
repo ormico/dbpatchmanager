@@ -14,9 +14,9 @@ namespace Ormico.DbPatchManager.SqlServer
 {
     public class SqlDatabase : IDatabase
     {
-        public void Connect(string ConnectionString)
+        public void Connect(DatabaseOptions Options)
         {
-            _con = new SqlConnection(ConnectionString);
+            _con = new SqlConnection(Options.ConnectionString);
             _con.Open();
 
             //todo: change database
