@@ -34,6 +34,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Dapper, Version=1.40.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Dapper.1.42\lib\net45\Dapper.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Microsoft.SqlServer.ConnectionInfo, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.SqlServer.Management.Sdk.Sfc, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.SqlServer.Smo, Version=11.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91, processorArchitecture=MSIL" />
@@ -60,11 +64,12 @@
     </Compile>
     <Compile Include="BuildConfigurationWriter.cs" />
     <Compile Include="DatabaseBuildConfiguration.cs" />
+    <Compile Include="DatabaseOptions.cs" />
     <Compile Include="IDatabase.cs" />
     <Compile Include="InitOptions.cs" />
     <Compile Include="InstalledPatchInfo.cs" />
+    <Compile Include="OdbcDatabase.cs" />
     <Compile Include="Patch.cs" />
-    <Compile Include="PatchIdReferenceResolver.cs" />
     <Compile Include="PatchManager.cs" />
     <Compile Include="PatchOptions.cs" />
     <Compile Include="PluginManager.cs" />
