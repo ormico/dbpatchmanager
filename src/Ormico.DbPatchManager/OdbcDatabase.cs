@@ -12,10 +12,21 @@ namespace Ormico.DbPatchManager
     {
         public void Connect(DatabaseOptions Options)
         {
+            _option = Options;
+
+            if(Options.AddInstalledPatchSql == null ||
+                Options.GetInstalledPatchesSql == null ||
+                Options.InitPatchTableSql == null)
+            {
+                throw new ApplicationException("ODBC Plugin requires overriding all scripts");
+            }
+
             _con = new OdbcConnection(Options.ConnectionString);
+            ExecuteDDL(_option.InitPatchTableSql);
         }
 
         OdbcConnection _con;
+        DatabaseOptions _option;
 
         public void Dispose()
         {
@@ -32,12 +43,17 @@ namespace Ormico.DbPatchManager
 
         public List<InstalledPatchInfo> GetInstalledPatches()
         {
-            throw new NotImplementedException();
+            List<InstalledPatchInfo> rc = _con.Query<InstalledPatchInfo>(_option.GetInstalledPatchesSql, null).ToList();
+            return rc;
         }
 
         public void LogInstalledPatch(string patchId)
         {
-            throw new NotImplementedException();
+            _con.Execute(_option.AddInstalledPatchSql,
+               new
+               {
+                   PatchId = patchId
+               }, commandType: System.Data.CommandType.Text);
         }
     }
 }
