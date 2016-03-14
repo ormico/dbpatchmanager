@@ -32,6 +32,7 @@ namespace Ormico.DbPatchManager
         }
 
         string ScriptOverridesFolder = @"ScriptOverrides";
+        //todo: not sure if making these .sql is best since not all databases are sql
         string AddInstalledPatchFileName = "AddInstalledPatch.sql";
         string GetInstalledPatchesFileName = "GetInstalledPatches.sql";
         string InitPatchTableFileName = "InitPatchTable.sql";
@@ -68,7 +69,7 @@ namespace Ormico.DbPatchManager
                 var cfg = cfgWriter.Read();
 
                 // load options
-                DatabaseOptions dbopt = LoadDatabaseOptions(cfg);
+                //DatabaseOptions dbopt = LoadDatabaseOptions(cfg);
 
                 //create unique id prefix to avoid collisions
                 string prefix = string.Format("{0:yyyyMMddHHmm}-{1:0000}",
@@ -110,7 +111,7 @@ namespace Ormico.DbPatchManager
 
                 using (var db = pm.LoadDatabasePlugin(cfg.DatabaseType))
                 {
-                    db.Connect(new DatabaseOptions() { ConnectionString = cfg.ConnectionString });
+                    db.Connect(dbopt);
                     var installedPatches = db.GetInstalledPatches();
 
                     //todo: add log/console output
@@ -215,17 +216,17 @@ namespace Ormico.DbPatchManager
 
             if (_io.File.Exists(_io.Path.Combine(ScriptOverridesFolder, AddInstalledPatchFileName)))
             {
-                rc.AddInstalledPatchSql = _io.File.ReadAllText(AddInstalledPatchFileName);
+                rc.AddInstalledPatchSql = _io.File.ReadAllText(_io.Path.Combine(ScriptOverridesFolder, AddInstalledPatchFileName));
             }
 
             if (_io.File.Exists(_io.Path.Combine(ScriptOverridesFolder, GetInstalledPatchesFileName)))
             {
-                rc.GetInstalledPatchesSql = _io.File.ReadAllText(GetInstalledPatchesFileName);
+                rc.GetInstalledPatchesSql = _io.File.ReadAllText(_io.Path.Combine(ScriptOverridesFolder, GetInstalledPatchesFileName));
             }
 
             if (_io.File.Exists(_io.Path.Combine(ScriptOverridesFolder, InitPatchTableFileName)))
             {
-                rc.InitPatchTableSql = _io.File.ReadAllText(InitPatchTableFileName);
+                rc.InitPatchTableSql = _io.File.ReadAllText(_io.Path.Combine(ScriptOverridesFolder, InitPatchTableFileName));
             }
 
             return rc;
