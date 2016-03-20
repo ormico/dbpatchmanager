@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace Ormico.DbPatchManager
 {
-    public class DatabaseOptions
+    public struct DatabaseOptions
     {
-        public DatabaseOptions()
-        {
-            AdditionalOptions = new Dictionary<string, string>();
-        }
+        //public DatabaseOptions()
+        //{
+        //    AdditionalOptions = new Dictionary<string, string>();
+        //}
 
         public string ConnectionString { get; set; }
         public string GetInstalledPatchesSql { get; set; }
