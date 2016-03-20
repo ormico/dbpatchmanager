@@ -10,7 +10,25 @@ namespace Ormico.DbPatchManager
     {
         public DatabaseBuildConfiguration()
         {
+            //defaults
+            PatchFolder = "Patches";
+            CodeFolder = "Code";
             patches = new List<Patch>();
+            CodeFiles = new List<string>()
+            {
+                "*.view.sql",
+                "*.udf.sql",
+                "*.view2.sql",
+                "*.udf2.sql",
+                "*.view3.sql",
+                "*.udf3.sql",
+                "*.sproc.sql",
+                "*.sproc2.sql",
+                "*.sproc3.sql",
+                "*.trigger.sql",
+                "*.trigger2.sql",
+                "*.trigger3.sql"
+            };
         }
 
         public string DatabaseType { get; set; }
@@ -20,6 +38,8 @@ namespace Ormico.DbPatchManager
         public string PatchFolder { get; set; }
 
         public string CodeFolder { get; set; }
+
+        public List<string> CodeFiles { get; set; }
 
         public Dictionary<string, string> Options { get; set; }
 
