@@ -42,6 +42,7 @@ namespace Ormico.DbPatchManager
                 var o = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_filePath));
                 rc = new DatabaseBuildConfiguration();
                 rc.CodeFolder = (string)o["CodeFolder"];
+                rc.CodeFiles = o["CodeFiles"].ToObject<List<string>>();
                 rc.ConnectionString = (string)o["ConnectionString"];
                 rc.DatabaseType = (string)o["DatabaseType"];
                 rc.PatchFolder = (string)o["PatchFolder"];
@@ -90,6 +91,7 @@ namespace Ormico.DbPatchManager
                 DatabaseType = buildConfiguration.DatabaseType,
                 ConnectionString = buildConfiguration.ConnectionString,
                 CodeFolder = buildConfiguration.CodeFolder,
+                CodeFiles = buildConfiguration.CodeFiles,
                 PatchFolder = buildConfiguration.PatchFolder,
                 Options = buildConfiguration.Options,
                 patches = from p in buildConfiguration.patches
