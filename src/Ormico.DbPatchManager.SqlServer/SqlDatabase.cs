@@ -16,6 +16,7 @@ namespace Ormico.DbPatchManager.SqlServer
     {
         public void Connect(DatabaseOptions Options)
         {
+            _options = Options;
             _con = new SqlConnection(Options.ConnectionString);
             _con.Open();
 
@@ -30,12 +31,14 @@ namespace Ormico.DbPatchManager.SqlServer
             InitPatchTable();
         }
 
+        DatabaseOptions _options;
         SqlConnection _con;
         Server _server;
 
         Lazy<string> _sqlAddInstalledPatch = new Lazy<string>(() => GetEmbededSql("Ormico.DbPatchManager.SqlServer.SqlScripts.AddInstalledPatch.sql"));
         Lazy<string> _sqlInitPatchTable = new Lazy<string>(() => GetEmbededSql("Ormico.DbPatchManager.SqlServer.SqlScripts.InitPatchTable.sql"));
         Lazy<string> _sqlGetInstalledPatches = new Lazy<string>(() => GetEmbededSql("Ormico.DbPatchManager.SqlServer.SqlScripts.GetInstalledPatches.sql"));
+        Lazy<string> _sqlTemp = new Lazy<string>(() => GetEmbededSql("Ormico.DbPatchManager.SqlServer.SqlScripts.temp.sql"));
 
         public void Dispose()
         {
