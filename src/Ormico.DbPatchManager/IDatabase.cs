@@ -15,5 +15,7 @@ namespace Ormico.DbPatchManager
         List<InstalledPatchInfo> GetInstalledPatches();
 
         void LogInstalledPatch(string patchId);
+
+        void ExecuteProgrammabilityScript(string commandText);
     }
 }

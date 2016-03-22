@@ -84,5 +84,10 @@ namespace Ormico.DbPatchManager.SqlServer
         
             return rc;
         }
+
+        public void ExecuteProgrammabilityScript(string commandText)
+        {
+            ExecuteDDL(commandText);
+        }
     }
 }

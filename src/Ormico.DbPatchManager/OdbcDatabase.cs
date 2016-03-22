@@ -55,5 +55,10 @@ namespace Ormico.DbPatchManager
                    PatchId = patchId
                }, commandType: System.Data.CommandType.Text);
         }
+
+        public void ExecuteProgrammabilityScript(string commandText)
+        {
+            ExecuteDDL(commandText);
+        }
     }
 }
