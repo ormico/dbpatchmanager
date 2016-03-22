@@ -76,6 +76,11 @@ namespace Ormico.DbPatchManager
             _io.File.WriteAllText(_fileName, JsonConvert.SerializeObject(_testDb, Formatting.Indented));
         }
 
+        public void ExecuteProgrammabilityScript(string commandText)
+        {
+            ExecuteDDL(commandText);
+        }
+
         class TestDb
         {
             public TestDb()
