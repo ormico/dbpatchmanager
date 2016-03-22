@@ -31,6 +31,7 @@ namespace Ormico.DbPatchManager
             _io = Io;
         }
 
+        DatabaseBuildConfiguration _configuration;
         string ScriptOverridesFolder = @"ScriptOverrides";
         //todo: not sure if making these .sql is best since not all databases are sql
         string AddInstalledPatchFileName = "AddInstalledPatch.sql";
@@ -99,25 +100,62 @@ namespace Ormico.DbPatchManager
         public void Build()
         {
             var cfgWriter = new BuildConfigurationWriter(_configFileName);
-            var cfg = cfgWriter.Read();
+            _configuration = cfgWriter.Read();
 
             // load options
-            DatabaseOptions dbopt = LoadDatabaseOptions(cfg);
+            DatabaseOptions dbopt = LoadDatabaseOptions(_configuration);
 
-            var first = cfg.GetFirstPatch();
+            List<string> codeFileNames = GetSortedCodeFileNames(_configuration, dbopt);
+
+            var first = _configuration.GetFirstPatch();
             if(first != null)
             {
                 PluginManager pm = new PluginManager();
 
-                using (var db = pm.LoadDatabasePlugin(cfg.DatabaseType))
+                using (var db = pm.LoadDatabasePlugin(_configuration.DatabaseType))
                 {
                     db.Connect(dbopt);
                     var installedPatches = db.GetInstalledPatches();
 
+                    //todo: if drop-all-sprocs-then-add-back option, then run drop all script
+
                     //todo: add log/console output
                     InstallPatch(first, db, installedPatches);
+
+                    // install code files
+                    InstallProgrammability(codeFileNames, db);
                 }
             }
+        }
+
+        void InstallProgrammability(List<string> codeFileNames, IDatabase db)
+        {
+            foreach (var fn in codeFileNames)
+            {
+                //todo: add log/console output
+                string sql = _io.File.ReadAllText(fn);
+                db.ExecuteProgrammabilityScript(sql);
+            }
+        }
+
+        private List<string> GetSortedCodeFileNames(DatabaseBuildConfiguration cfg, DatabaseOptions dbopt)
+        {
+            List<string> rc = new List<string>();
+            
+            //todo: exclude if starts with "!" or add a glob library that includes this option
+
+            // loop through each file name or pattern in CodeFiles, adding to rc in order
+            // only add files once
+            foreach (var p in cfg.CodeFiles)
+            {
+                var currentFiles = _io.Directory.GetFiles(cfg.CodeFolder, p, System.IO.SearchOption.TopDirectoryOnly);
+                var filteredList = from f in currentFiles
+                                   where !rc.Contains(f)
+                                   select f;
+                rc.AddRange(filteredList);
+            }
+
+            return rc;
         }
 
         private void InstallPatch(Patch patch, IDatabase db, List<InstalledPatchInfo> installedPatches)
@@ -163,8 +201,10 @@ namespace Ormico.DbPatchManager
                 }
                 else
                 {
+                    string folder = _io.Path.Combine(_configuration.PatchFolder, current.Id);
+
                     // if there are no dependencies and patch is not installed then install it
-                    if (!_io.Directory.Exists(current.Id))
+                    if (!_io.Directory.Exists(folder))
                     {
                         throw new ApplicationException(string.Format("Patch folder '{0}' missing.", current.Id));
                     }
@@ -173,7 +213,7 @@ namespace Ormico.DbPatchManager
                         // make sure patch isn't already installed
                         if (!isInstalled)
                         {
-                            var files = _io.Directory.GetFiles(current.Id);
+                            var files = _io.Directory.GetFiles(folder);
                             foreach (var file in files)
                             {
                                 var ext = _io.Path.GetExtension(file);
