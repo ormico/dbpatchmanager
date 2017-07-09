@@ -13,17 +13,23 @@ namespace Ormico.DbPatchManager.Cmd
         {
             int rc = 0;
             var options = new Options();
-            bool parse = CommandLine.Parser.Default.ParseArguments(args, options, ParseArgs);
-
-            if (!parse)
+            try
             {
-                rc = CommandLine.Parser.DefaultExitCodeFail;
-            }
-            else
-            {
-                rc = _rc;
-            }
+                bool parse = CommandLine.Parser.Default.ParseArguments(args, options, ParseArgs);
 
+                if (!parse)
+                {
+                    rc = CommandLine.Parser.DefaultExitCodeFail;
+                }
+                else
+                {
+                    rc = _rc;
+                }
+            }
+            catch(Exception ex)
+            {
+
+            }
             return rc;
         }
 
