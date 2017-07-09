@@ -13,13 +13,13 @@ namespace Ormico.DbPatchManager.Cmd.CommandLineOptions
         {
         }
 
-        [VerbOption("init", HelpText = "")]
+        [VerbOption("init", HelpText = "init")]
         public InitOptions InitVerb { get; set; }
 
         [VerbOption("addpatch", HelpText = "Create a new Patch folder and add it to odpm.json")]
         public AddPatchOptions AddPatchVerb { get; set; }
 
-        [VerbOption("build", HelpText = "")]
+        [VerbOption("build", HelpText = "build")]
         public BuildOptions BuildVerb { get; set; }
     }
 
