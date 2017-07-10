@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CommandLine;
 
 namespace Ormico.DbPatchManager.Cmd
 {
@@ -12,90 +13,58 @@ namespace Ormico.DbPatchManager.Cmd
         static int Main(string[] args)
         {
             int rc = 0;
-            var options = new Options();
             try
             {
-                bool parse = CommandLine.Parser.Default.ParseArguments(args, options, ParseArgs);
-
-                if (!parse)
-                {
-                    rc = CommandLine.Parser.DefaultExitCodeFail;
-                }
-                else
-                {
-                    rc = _rc;
-                }
+                rc = CommandLine.Parser.Default.ParseArguments<InitCmdLineOptions, AddPatchCmdLineOptions, BuildCmdLineOptions>(args)
+                    .MapResult(
+                        (InitCmdLineOptions o) => InitBuildSettings(o),
+                        (AddPatchCmdLineOptions o) => AddPatch(o),
+                        (BuildCmdLineOptions o) => Build(o),
+                        err => 1
+                    );
             }
             catch(Exception ex)
             {
-
+                Console.WriteLine($"{ex.Message}");
             }
+
             return rc;
         }
 
-        static int _rc = 0;
+        private const string _patchFileName = ".\\patches.json";
 
-        static void ParseArgs(string verb, object subOptions)
-        {
-            if (StrEq("init", verb))
-            {
-                _rc = InitBuildSettings(subOptions as InitOptions);
-            }
-            else if (StrEq("addpatch", verb))
-            {
-                _rc = AddPatch(subOptions as AddPatchOptions);
-            }
-            else if (StrEq("build", verb))
-            {
-                _rc = Build(subOptions as BuildOptions);
-            }
-            else
-            {
-                //todo: create custom exception
-                throw new ApplicationException(string.Format("Unknown command '{0}'", verb));
-            }
-        }
-
-        static bool StrEq(string a, string b)
+        public static bool StrEq(string a, string b)
         {
             return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
         }
 
-        static int InitBuildSettings(InitOptions options)
+        static int InitBuildSettings(InitCmdLineOptions options)
         {
             int rc = 0;
-            PatchManager manager = new PatchManager(".\\patchManager.json");
-            manager.InitConfig(options);
+            PatchManager manager = new PatchManager(_patchFileName);
+            //todo: pass all settings
+            manager.InitConfig(new InitOptions() { DbType = options.DbType });
 
             return rc;
         }
 
-        static int AddPatch(AddPatchOptions options)
+        static int AddPatch(AddPatchCmdLineOptions options)
         {
             int rc = 0;
-            PatchManager manager = new PatchManager(".\\patchManager.json");
+            PatchManager manager = new PatchManager(_patchFileName);
+            //todo: pass all settings
             manager.AddPatch(options.Name, new PatchOptions()
             {
             });
             return rc;
         }
 
-        static int Build(BuildOptions options)
+        static int Build(BuildCmdLineOptions options)
         {
             int rc = 0;
-            PatchManager manager = new PatchManager(".\\patchManager.json");
+            PatchManager manager = new PatchManager(_patchFileName);
             manager.Build();
             return rc;
         }
-        
-
-        /*
-        int AddPatch(AddPatchOptions options)
-        {
-            int rc = 0;
-
-            return rc;
-        }
-        */
     }
 }
