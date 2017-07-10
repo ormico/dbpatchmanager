@@ -51,18 +51,18 @@ namespace Ormico.DbPatchManager
             var cfgWriter = new BuildConfigurationWriter(_configFileName);
             cfgWriter.Write(new DatabaseBuildConfiguration()
             {
-                DatabaseType = "Ormico.DbPatchManager.TestDatabase",
-                ConnectionString = "File=testDatabase.json;",
+                DatabaseType = Options?.DbType,
+                ConnectionString = null,
                 PatchFolder = "Patches",
                 CodeFolder = "Code"
             });
         }
 
-        public void AddPatch(string PatchID, PatchOptions Options = null)
+        public void AddPatch(string patchName, PatchOptions Options = null)
         {
-            if(string.IsNullOrWhiteSpace(PatchID))
+            if(string.IsNullOrWhiteSpace(patchName))
             {
-                throw new ApplicationException("Patch ID required");
+                throw new ApplicationException("Patch Name required");
             }
             else
             {
@@ -76,11 +76,12 @@ namespace Ormico.DbPatchManager
                 string prefix = string.Format("{0:yyyyMMddHHmm}-{1:0000}",
                     DateTime.Now,
                     _rand.Next(0, 9999));
-                string finalId = string.Format("{0}-{1}", prefix, PatchID.Trim());
+                string finalId = string.Format("{0}-{1}", prefix, patchName.Trim());
+                string patchPath = _io.Path.Combine(cfg.PatchFolder, finalId);
 
-                if(!_io.Directory.Exists(finalId))
+                if(!_io.Directory.Exists(patchPath))
                 {
-                    _io.Directory.CreateDirectory(finalId);
+                    _io.Directory.CreateDirectory(patchPath);
 
                     // when adding a patch, make it dependent on all patches 
                     // that don't already have a dependency.
@@ -148,7 +149,8 @@ namespace Ormico.DbPatchManager
             // only add files once
             foreach (var p in cfg.CodeFiles)
             {
-                var currentFiles = _io.Directory.GetFiles(cfg.CodeFolder, p, System.IO.SearchOption.TopDirectoryOnly);
+                var currentFiles = _io.Directory.GetFiles(cfg.CodeFolder, p, 
+                    System.IO.SearchOption.TopDirectoryOnly);
                 var filteredList = from f in currentFiles
                                    where !rc.Contains(f)
                                    select f;
@@ -211,11 +213,19 @@ namespace Ormico.DbPatchManager
                     else
                     {
                         // make sure patch isn't already installed
-                        if (!isInstalled)
+                        if (isInstalled)
                         {
+                            Console.WriteLine("{0} <already installed>", current.Id);
+                        }
+                        else
+                        {
+                            Console.WriteLine(current.Id);
+
                             var files = _io.Directory.GetFiles(folder);
                             foreach (var file in files)
                             {
+                                Console.WriteLine(file);
+
                                 var ext = _io.Path.GetExtension(file);
                                 if (string.Equals(ext, ".sql", StringComparison.OrdinalIgnoreCase))
                                 {
