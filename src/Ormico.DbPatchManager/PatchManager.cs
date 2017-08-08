@@ -9,9 +9,10 @@ namespace Ormico.DbPatchManager
 {
     public class PatchManager
     {
-        public PatchManager(string ConfigFile)
+        public PatchManager(string ConfigFile, string LocalConfigFile)
         {
             _configFileName = ConfigFile;
+            _configLocalFileName = LocalConfigFile;
             _rand = new Random();
             _io = new FileSystem();
         }
@@ -39,6 +40,7 @@ namespace Ormico.DbPatchManager
         string InitPatchTableFileName = "InitPatchTable.sql";
 
         readonly string _configFileName;
+        readonly string _configLocalFileName;
         readonly Random _rand;
         
         /// <summary>
@@ -48,7 +50,7 @@ namespace Ormico.DbPatchManager
 
         public void InitConfig(InitOptions Options)
         {
-            var cfgWriter = new BuildConfigurationWriter(_configFileName);
+            var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName);
             cfgWriter.Write(new DatabaseBuildConfiguration()
             {
                 DatabaseType = Options?.DbType,
@@ -66,7 +68,7 @@ namespace Ormico.DbPatchManager
             }
             else
             {
-                var cfgWriter = new BuildConfigurationWriter(_configFileName);
+                var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName);
                 var cfg = cfgWriter.Read();
 
                 // load options
@@ -100,7 +102,7 @@ namespace Ormico.DbPatchManager
 
         public void Build()
         {
-            var cfgWriter = new BuildConfigurationWriter(_configFileName);
+            var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName);
             _configuration = cfgWriter.Read();
 
             // load options

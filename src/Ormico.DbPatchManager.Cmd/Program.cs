@@ -26,12 +26,17 @@ namespace Ormico.DbPatchManager.Cmd
             catch(Exception ex)
             {
                 Console.WriteLine($"{ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"{ex.InnerException.Message}");
+                }
             }
 
             return rc;
         }
 
         private const string _patchFileName = ".\\patches.json";
+        private const string _patchLocalFileName = ".\\patches.local.json";
 
         public static bool StrEq(string a, string b)
         {
@@ -41,7 +46,7 @@ namespace Ormico.DbPatchManager.Cmd
         static int InitBuildSettings(InitCmdLineOptions options)
         {
             int rc = 0;
-            PatchManager manager = new PatchManager(_patchFileName);
+            PatchManager manager = new PatchManager(_patchFileName, _patchLocalFileName);
             //todo: pass all settings
             manager.InitConfig(new InitOptions() { DbType = options.DbType });
 
@@ -51,7 +56,7 @@ namespace Ormico.DbPatchManager.Cmd
         static int AddPatch(AddPatchCmdLineOptions options)
         {
             int rc = 0;
-            PatchManager manager = new PatchManager(_patchFileName);
+            PatchManager manager = new PatchManager(_patchFileName, _patchLocalFileName);
             //todo: pass all settings
             manager.AddPatch(options.Name, new PatchOptions()
             {
@@ -62,7 +67,7 @@ namespace Ormico.DbPatchManager.Cmd
         static int Build(BuildCmdLineOptions options)
         {
             int rc = 0;
-            PatchManager manager = new PatchManager(_patchFileName);
+            PatchManager manager = new PatchManager(_patchFileName, _patchLocalFileName);
             manager.Build();
             return rc;
         }
