@@ -30,6 +30,7 @@ namespace Ormico.DbPatchManager.Cmd
                 {
                     Console.WriteLine($"{ex.InnerException.Message}");
                 }
+                rc = -1;
             }
 
             return rc;
