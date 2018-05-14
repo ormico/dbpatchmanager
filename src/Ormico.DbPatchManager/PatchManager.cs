@@ -51,13 +51,25 @@ namespace Ormico.DbPatchManager
         public void InitConfig(InitOptions Options)
         {
             var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName);
-            cfgWriter.Write(new DatabaseBuildConfiguration()
+            DatabaseBuildConfiguration databaseBuildConfiguration = new DatabaseBuildConfiguration()
             {
                 DatabaseType = Options?.DbType,
                 ConnectionString = null,
                 PatchFolder = "Patches",
                 CodeFolder = "Code"
-            });
+            };
+
+            if (!_io.Directory.Exists(databaseBuildConfiguration.PatchFolder))
+            {
+                _io.Directory.CreateDirectory(databaseBuildConfiguration.PatchFolder);
+            }
+
+            if (!_io.Directory.Exists(databaseBuildConfiguration.CodeFolder))
+            {
+                _io.Directory.CreateDirectory(databaseBuildConfiguration.CodeFolder);
+            }
+
+            cfgWriter.Write(databaseBuildConfiguration);
         }
 
         public void AddPatch(string patchName, PatchOptions Options = null)
@@ -136,6 +148,7 @@ namespace Ormico.DbPatchManager
             foreach (var fn in codeFileNames)
             {
                 //todo: add log/console output
+                Console.WriteLine($"Installing: {fn}");
                 string sql = _io.File.ReadAllText(fn);
                 db.ExecuteProgrammabilityScript(sql);
             }
