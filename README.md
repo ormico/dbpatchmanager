@@ -1,6 +1,10 @@
 # DB Patch Manager
 Database development tool for change control.
 
+SQL Server plugin requires SMO v11 SQL2012SP1 x86
+https://www.microsoft.com/en-us/download/details.aspx?id=35580
+Install SQLSysClrTypes.msi and SharedManagementObjects.msi x86 versions.
+
 ## Create new db project
 ```PS C:\MyProject> .\dbpatch.exe init --dbtype "Ormico.DbPatchManager.SqlServer.dll, Ormico.DbPatchManager.SqlServer.SqlDatabase"```
 
