@@ -1,9 +1,6 @@
-﻿using Ormico.DbPatchManager.Cmd.CommandLineOptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
+using Ormico.DbPatchManager.Cmd.CommandLineOptions;
+using Ormico.DbPatchManager.Logic;
 using CommandLine;
 
 namespace Ormico.DbPatchManager.Cmd
@@ -15,7 +12,7 @@ namespace Ormico.DbPatchManager.Cmd
             int rc = 0;
             try
             {
-                rc = CommandLine.Parser.Default.ParseArguments<InitCmdLineOptions, AddPatchCmdLineOptions, BuildCmdLineOptions>(args)
+                rc = CommandLine.Parser.Default.ParseArguments(args, typeof(InitCmdLineOptions), typeof(AddPatchCmdLineOptions), typeof(BuildCmdLineOptions))
                     .MapResult(
                         (InitCmdLineOptions o) => InitBuildSettings(o),
                         (AddPatchCmdLineOptions o) => AddPatch(o),
@@ -23,7 +20,7 @@ namespace Ormico.DbPatchManager.Cmd
                         err => 1
                     );
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine($"{ex.Message}");
                 if (ex.InnerException != null)

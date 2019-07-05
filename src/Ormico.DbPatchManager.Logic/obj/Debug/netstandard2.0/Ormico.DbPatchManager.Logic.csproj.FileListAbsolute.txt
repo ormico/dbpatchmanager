@@ -1,0 +1,9 @@
+C:\Users\zack.moore\projects\dbpatch\src\Ormico.DbPatchManager.Logic\obj\Debug\netstandard2.0\Ormico.DbPatchManager.Logic.csprojAssemblyReference.cache
+C:\Users\zack.moore\projects\dbpatch\src\Ormico.DbPatchManager.Logic\obj\Debug\netstandard2.0\Ormico.DbPatchManager.Logic.csproj.CoreCompileInputs.cache
+C:\Users\zack.moore\projects\dbpatch\src\Ormico.DbPatchManager.Logic\obj\Debug\netstandard2.0\Ormico.DbPatchManager.Logic.AssemblyInfoInputs.cache
+C:\Users\zack.moore\projects\dbpatch\src\Ormico.DbPatchManager.Logic\obj\Debug\netstandard2.0\Ormico.DbPatchManager.Logic.AssemblyInfo.cs
+C:\Users\zack.moore\projects\dbpatch\src\Ormico.DbPatchManager.Logic\bin\Debug\netstandard2.0\Ormico.DbPatchManager.Logic.deps.json
+C:\Users\zack.moore\projects\dbpatch\src\Ormico.DbPatchManager.Logic\bin\Debug\netstandard2.0\Ormico.DbPatchManager.Logic.dll
+C:\Users\zack.moore\projects\dbpatch\src\Ormico.DbPatchManager.Logic\bin\Debug\netstandard2.0\Ormico.DbPatchManager.Logic.pdb
+C:\Users\zack.moore\projects\dbpatch\src\Ormico.DbPatchManager.Logic\obj\Debug\netstandard2.0\Ormico.DbPatchManager.Logic.dll
+C:\Users\zack.moore\projects\dbpatch\src\Ormico.DbPatchManager.Logic\obj\Debug\netstandard2.0\Ormico.DbPatchManager.Logic.pdb

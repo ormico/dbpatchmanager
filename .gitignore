@@ -1,4 +1,6 @@
 src/.vs/
+temp/
+src2/
 src/packages/
 src/Ormico.DbPatchManager.Cmd/*.user
 src/Ormico.DbPatchManager.Cmd/bin/Debug
