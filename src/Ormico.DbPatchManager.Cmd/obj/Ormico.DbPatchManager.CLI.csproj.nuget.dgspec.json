@@ -1,0 +1,136 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Cmd\\Ormico.DbPatchManager.CLI.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Cmd\\Ormico.DbPatchManager.CLI.csproj": {
+      "version": "2.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Cmd\\Ormico.DbPatchManager.CLI.csproj",
+        "projectName": "dbpatch",
+        "projectPath": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Cmd\\Ormico.DbPatchManager.CLI.csproj",
+        "packagesPath": "C:\\Users\\zack.moore\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Cmd\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\zack.moore\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netcoreapp2.2"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netcoreapp2.2": {
+            "projectReferences": {
+              "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Logic\\Ormico.DbPatchManager.Logic.csproj": {
+                "projectPath": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Logic\\Ormico.DbPatchManager.Logic.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netcoreapp2.2": {
+          "dependencies": {
+            "CommandLineParser": {
+              "target": "Package",
+              "version": "[2.5.0, )"
+            },
+            "Microsoft.NETCore.App": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[2.2.0, )",
+              "autoReferenced": true
+            }
+          },
+          "imports": [
+            "net461"
+          ],
+          "assetTargetFallback": true,
+          "warn": true
+        }
+      }
+    },
+    "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Logic\\Ormico.DbPatchManager.Logic.csproj": {
+      "version": "2.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Logic\\Ormico.DbPatchManager.Logic.csproj",
+        "projectName": "Ormico.DbPatchManager.Logic",
+        "projectPath": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Logic\\Ormico.DbPatchManager.Logic.csproj",
+        "packagesPath": "C:\\Users\\zack.moore\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Logic\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\zack.moore\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netstandard2.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netstandard2.0": {
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netstandard2.0": {
+          "dependencies": {
+            "Dapper": {
+              "target": "Package",
+              "version": "[1.60.6, )"
+            },
+            "NETStandard.Library": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[2.0.3, )",
+              "autoReferenced": true
+            },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[12.0.2, )"
+            },
+            "System.Data.Odbc": {
+              "target": "Package",
+              "version": "[4.5.0, )"
+            },
+            "System.IO.Abstractions": {
+              "target": "Package",
+              "version": "[6.0.14, )"
+            }
+          },
+          "imports": [
+            "net461"
+          ],
+          "assetTargetFallback": true,
+          "warn": true
+        }
+      }
+    }
+  }
+}

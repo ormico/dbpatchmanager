@@ -2097,9 +2097,9 @@
   "project": {
     "version": "2.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Cmd\\Ormico.DbPatchManager.Cmd.csproj",
+      "projectUniqueName": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Cmd\\Ormico.DbPatchManager.CLI.csproj",
       "projectName": "dbpatch",
-      "projectPath": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Cmd\\Ormico.DbPatchManager.Cmd.csproj",
+      "projectPath": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Cmd\\Ormico.DbPatchManager.CLI.csproj",
       "packagesPath": "C:\\Users\\zack.moore\\.nuget\\packages\\",
       "outputPath": "C:\\Users\\zack.moore\\projects\\dbpatch\\src\\Ormico.DbPatchManager.Cmd\\obj\\",
       "projectStyle": "PackageReference",
