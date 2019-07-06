@@ -1,11 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>2.0.0</Version>
+    <Version>2.0.0.1</Version>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <RepositoryUrl>https://github.com/ormico/dbpatchmanager</RepositoryUrl>
     <Copyright>Copyright (c) 2019 Zack Moore</Copyright>
@@ -13,6 +13,7 @@
     <Company>Ormico</Company>
     <Product>Ormico DB Patch Manager CLI</Product>
     <AssemblyName>dbpatch</AssemblyName>
+    <PackageId>Ormico.DbPatchManager.Logic</PackageId>
   </PropertyGroup>
 
   <ItemGroup>
