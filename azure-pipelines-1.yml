@@ -21,11 +21,8 @@ steps:
     command: 'build'
     projects: 'src/Ormico.DbPatchManager.sln'
     workingDirectory: 'src'
-- task: NuGetCommand@2
+- task: DotNetCoreCLI@2
   inputs:
     command: pack
-    packagesToPack: '**/*.csproj'
-    versioningScheme: byPrereleaseNumber
-    majorVersion: '$(Major)'
-    minorVersion: '$(Minor)'
-    patchVersion: '$(Build.BuildNumber)'
+    projects: 'src/Ormico.DbPatchManager.sln'
+    workingDirectory: 'src'
