@@ -18,7 +18,7 @@ Create a new file named `patches.local.json` When you are a adding files to sour
 Each developer would enter their local connection string. When deploying, you would enter the production server's connection string.
 
 ## Add a database patch
-```PS C:\MyProject> .\dbpatch.exe addpatch --name TestPatch```
+```PS C:\MyProject> .\dbpatch addpatch --name TestPatch```
 
 Creates a folder for the patch in `C:\MyProject\Patches\` and adds the patch to the patches.json file. The folder is named using a date time string and a random number and the name. For example something like `201708011412-2403-testpatch`. User can place .sql files in the patch folder and they will be run when the patch is applied. If the user includes more than one patch file, they are run in alphabetical order.
 
