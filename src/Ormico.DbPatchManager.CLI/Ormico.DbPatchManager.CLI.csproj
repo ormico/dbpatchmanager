@@ -13,8 +13,22 @@
     <Company>Ormico</Company>
     <Product>Ormico DB Patch Manager CLI</Product>
     <AssemblyName>dbpatch</AssemblyName>
-    <PackageId>Ormico.DbPatchManager.Logic</PackageId>
+    <PackageId>Ormico.DbPatchManager.CLI</PackageId>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="dbpatch" />
+    <None Remove="dbpatch.cmd" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="dbpatch">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="dbpatch.cmd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.5.0" />
@@ -28,15 +42,6 @@
     <None Include="..\..\LICENSE">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="dbpatch">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="dbpatch.cmd">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
