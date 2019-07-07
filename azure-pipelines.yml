@@ -7,7 +7,14 @@ variables:
   buildConfiguration: 'Release'
   Version: '2.0.$(Build.BuildId)'
 steps:
-- bash: echo $(Version)
+- task: Bash@3
+  inputs:
+    targetType: 'inline'
+    script: '# Write your commands here
+      echo xxxxxxxxxxxxxxxxxx
+      echo $(Version)
+      echo xxxxxxxxxxxxxxxxxx
+      # Use the environment variables input below to pass secret variables to this script'
 - task: DotNetCoreCLI@2
   inputs:
     command: 'build'
