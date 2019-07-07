@@ -7,6 +7,7 @@ variables:
   buildConfiguration: 'Release'
   Version: '2.0.$(Build.BuildId)'
 steps:
+- bash: echo $(Version)
 - task: DotNetCoreCLI@2
   inputs:
     command: 'build'
