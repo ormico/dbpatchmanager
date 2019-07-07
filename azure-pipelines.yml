@@ -5,7 +5,7 @@ pool:
 variables:
   system.debug: true
   buildConfiguration: 'Release'
-  Version: '2.0.$(Build.BuildId)'
+  Version: '2.0.0.$(Build.BuildId)'
 steps:
 - bash: echo v$(Version)
 - task: DotNetCoreCLI@2
