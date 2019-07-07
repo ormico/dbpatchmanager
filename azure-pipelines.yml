@@ -3,6 +3,7 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 variables:
+  system.debug: true
   buildConfiguration: 'Release'
   Version: '2.0.$(Build.BuildId)'
 steps:
