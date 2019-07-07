@@ -12,3 +12,7 @@ steps:
     projects: 'src/Ormico.DbPatchManager.sln'
     workingDirectory: 'src'
     arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    artifactName: nuget-artifacts
