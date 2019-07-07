@@ -3,7 +3,7 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
 
 trigger:
-- dotnet-core
+- master
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -13,11 +13,16 @@ variables:
   Major: '2'
   Minor: '0'
   Patch: '0'
-  Version: '$(Major).$(Minor).$(Patch).$(Build.BuildNumber)'
+  Version: '$(Major).$(Minor).$(Build.BuildNumber)'
 
 steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'build'
+    projects: 'src/Ormico.DbPatchManager.sln'
+    workingDirectory: 'src'
+- task: DotNetCoreCLI@2
+  inputs:
+    command: pack
     projects: 'src/Ormico.DbPatchManager.sln'
     workingDirectory: 'src'
