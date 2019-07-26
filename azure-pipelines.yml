@@ -11,11 +11,15 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'build'
-#    projects: 'src/Ormico.DbPatchManager.sln'
-    projects: 'src/*.sln'
-    workingDirectory: 'src'
+    projects: 'src/Ormico.DbPatchManager.sln'
     arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+- bash: dotnet build -c release src/Ormico.DbPatchManager.CLI/Ormico.DbPatchManager.CLI.csproj
+- bash: dotnet publish -c release src/Ormico.DbPatchManager.CLI/Ormico.DbPatchManager.CLI.csproj
 - task: PublishBuildArtifacts@1
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)'
     artifactName: nuget-artifacts
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: 'src/Ormico.DbPatchManager.CLI/bin/release/netcoreapp2.2/publish/'
+    artifactName: zip-artifacts
