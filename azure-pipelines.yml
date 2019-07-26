@@ -17,9 +17,8 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'publish'
-    projects: 'src/Ormico.DbPatchManager.CLI/Ormico.DbPatchManager.CLI.csproj'
-    workingDirectory: 'src'
-    arguments: '--configuration $(buildConfiguration)'
+    publishWebProjects: true
+    workingDirectory: 'src/Ormico.DbPatchManager.CLI/'
 - task: PublishBuildArtifacts@1
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)'
