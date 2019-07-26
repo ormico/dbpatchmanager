@@ -90,7 +90,9 @@ namespace Ormico.DbPatchManager.Logic
                 string prefix = string.Format("{0:yyyyMMddHHmm}-{1:0000}",
                     DateTime.Now,
                     _rand.Next(0, 9999));
-                string finalId = string.Format("{0}-{1}", prefix, patchName.Trim());
+
+                // patch names are limited to 50 char total at present, but this could be a property of the plugin
+                string finalId = $"{prefix}-{patchName.Trim()}".Substring(0, 50);
                 string patchPath = _io.Path.Combine(cfg.PatchFolder, finalId);
 
                 if(!_io.Directory.Exists(patchPath))
@@ -107,7 +109,7 @@ namespace Ormico.DbPatchManager.Logic
                 else
                 {
                     // create custom exception
-                    throw new ApplicationException(string.Format("A folder named '{0}' already exists", finalId));
+                    throw new ApplicationException($"A folder named '{finalId}' already exists");
                 }
             }
         }
