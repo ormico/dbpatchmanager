@@ -19,7 +19,7 @@ steps:
     command: 'publish'
     projects: 'src/Ormico.DbPatchManager.CLI/Ormico.DbPatchManager.CLI.csproj'
     workingDirectory: 'src'
-    arguments: '--configuration $(buildConfiguration)
+    arguments: '--configuration $(buildConfiguration)'
 - task: PublishBuildArtifacts@1
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)'
