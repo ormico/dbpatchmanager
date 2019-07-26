@@ -13,7 +13,7 @@ steps:
     command: 'build'
     projects: 'src/Ormico.DbPatchManager.sln'
     arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
-- bash: dotnet publish src/Ormico.DbPatchManager.CLI/Ormico.DbPatchManager.CLI.csproj
+- bash: dotnet publish -c release src/Ormico.DbPatchManager.CLI/Ormico.DbPatchManager.CLI.csproj
 - task: PublishBuildArtifacts@1
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)'
