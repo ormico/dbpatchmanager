@@ -87,12 +87,12 @@ namespace Ormico.DbPatchManager.Logic
                 //DatabaseOptions dbopt = LoadDatabaseOptions(cfg);
 
                 //create unique id prefix to avoid collisions
-                string prefix = string.Format("{0:yyyyMMddHHmm}-{1:0000}",
-                    DateTime.Now,
-                    _rand.Next(0, 9999));
+                string prefix = $"{DateTime.Now:yyyyMMddHHmm}-{_rand.Next(0, 9999):0000}";
 
                 // patch names are limited to 50 char total at present, but this could be a property of the plugin
-                string finalId = $"{prefix}-{patchName.Trim()}".Substring(0, 50);
+                string finalId = $"{prefix}-{patchName.Trim()}";
+                finalId = finalId.Substring(0, Math.Min(50, finalId.Length));
+
                 string patchPath = _io.Path.Combine(cfg.PatchFolder, finalId);
 
                 if(!_io.Directory.Exists(patchPath))
