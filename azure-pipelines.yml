@@ -24,3 +24,7 @@ steps:
   inputs:
     pathtoPublish: '$(Build.ArtifactStagingDirectory)'
     artifactName: nuget-artifacts
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: 'src/Ormico.DbPatchManager.CLI/bin/Release/netcoreapp2.2/publish/'
+    artifactName: zip-artifacts
