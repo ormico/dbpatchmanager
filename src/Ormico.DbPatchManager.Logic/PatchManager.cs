@@ -182,6 +182,7 @@ namespace Ormico.DbPatchManager.Logic
             LinkedList<Patch> graph = new LinkedList<Patch>();
             graph.AddLast(patch);
             Patch current;
+            List<string> idsLogged = new List<string>();
 
             while (graph.Any())
             {
@@ -230,8 +231,16 @@ namespace Ormico.DbPatchManager.Logic
                         // make sure patch isn't already installed
                         if (isInstalled)
                         {
-                            //Console.WriteLine("{0} <already installed>", current.Id);
-                            Console.WriteLine(">");
+                            if (idsLogged.Contains(current.Id))
+                            {
+                                Console.Write(">");
+                            }
+                            else
+                            {
+                                Console.WriteLine();
+                                Console.Write("{0}: already installed>", current.Id);
+                                idsLogged.Add(current.Id);
+                            }
                         }
                         else
                         {
@@ -267,6 +276,7 @@ namespace Ormico.DbPatchManager.Logic
                     }
                 }
             }
+            Console.WriteLine();
         }
 
         /// <summary>
