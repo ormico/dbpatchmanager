@@ -47,3 +47,6 @@ The default list of code file extensions and the order they load is:
 ```PS C:\MyProject> .\dbpatch build```
 
 Applies all missing patches and runs all code files.
+
+## Database Plugin
+[SQL Server Plugin](https://github.com/ormico/dbpatchmanager-sqlserver)
