@@ -181,14 +181,13 @@ namespace Ormico.DbPatchManager.Logic
         {
             LinkedList<Patch> graph = new LinkedList<Patch>();
             graph.AddLast(patch);
-            bool isInstalled;
             Patch current;
 
-            while (graph.Count() > 0)
+            while (graph.Any())
             {
                 current = graph.First.Value;
                 graph.RemoveFirst();
-                isInstalled = installedPatches.Any(i => string.Equals(i.PatchId, current.Id));
+                var isInstalled = installedPatches.Any(i => string.Equals(i.PatchId, current.Id));
 
                 List<Patch> notInstalledDependencies = new List<Patch>();
                 // make sure all dependencies are installed
@@ -196,10 +195,9 @@ namespace Ormico.DbPatchManager.Logic
                 {
                     // check each dependency and see if it is already installed
                     // add not installed dependencies to a list
-                    bool isDepInstalled;
                     foreach (Patch dependency in current.DependsOn)
                     {
-                        isDepInstalled = installedPatches.Any(i => string.Equals(i.PatchId, dependency.Id));
+                        var isDepInstalled = installedPatches.Any(i => string.Equals(i.PatchId, dependency.Id));
                         if(!isDepInstalled)
                         {
                             notInstalledDependencies.Add(dependency);
@@ -207,7 +205,7 @@ namespace Ormico.DbPatchManager.Logic
                     }
                 }
 
-                if(notInstalledDependencies.Count() > 0)
+                if(notInstalledDependencies.Any())
                 {
                     // if there are dependencies to install
                     // put current back on stack and put dependencies on stack
@@ -225,20 +223,22 @@ namespace Ormico.DbPatchManager.Logic
                     // if there are no dependencies and patch is not installed then install it
                     if (!_io.Directory.Exists(folder))
                     {
-                        throw new ApplicationException(string.Format("Patch folder '{0}' missing.", current.Id));
+                        throw new ApplicationException($"Patch folder '{current.Id}' missing.");
                     }
                     else
                     {
                         // make sure patch isn't already installed
                         if (isInstalled)
                         {
-                            Console.WriteLine("{0} <already installed>", current.Id);
+                            //Console.WriteLine("{0} <already installed>", current.Id);
+                            Console.WriteLine(">");
                         }
                         else
                         {
+                            Console.WriteLine();
                             Console.WriteLine(current.Id);
 
-                            var files = _io.Directory.GetFiles(folder);
+                            var files = _io.Directory.GetFiles(folder).OrderBy(s => s);
                             foreach (var file in files)
                             {
                                 Console.WriteLine(file);
