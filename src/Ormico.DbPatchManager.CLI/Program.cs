@@ -33,8 +33,8 @@ namespace Ormico.DbPatchManager.CLI
             return rc;
         }
 
-        private const string _patchFileName = ".\\patches.json";
-        private const string _patchLocalFileName = ".\\patches.local.json";
+        private const string _patchFileName = "patches.json";
+        private const string _patchLocalFileName = "patches.local.json";
 
         public static bool StrEq(string a, string b)
         {
