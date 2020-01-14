@@ -2,6 +2,10 @@
 Database development tool for change control.
 v2.0 has been updated to .NET Core for cross platform support.
 
+DB Patch Manager supports database development across multiple source control branches by tracking the dependencies of each patch and installing them in the correct order. When a developer adds a new patch, that patch depends on all the previous patches recorded in that branch. When branches are merged the `patches.json` file is merged to include all patches and the dependency tree from each branch. 
+
+Database changes are deployed using the `build` command. DB Patch Manager will check the database to determine which patches have already been installed before installing new patches in the correct order.
+
 ## Create new db project
 ```PS C:\MyProject> .\dbpatch init --dbtype "Ormico.DbPatchManager.SqlServer.dll, Ormico.DbPatchManager.SqlServer.SqlDatabase"```
 
