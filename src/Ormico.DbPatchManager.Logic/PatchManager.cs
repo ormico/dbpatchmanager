@@ -233,12 +233,12 @@ namespace Ormico.DbPatchManager.Logic
                         {
                             if (idsLogged.Contains(current.Id))
                             {
-                                Console.Write(">");
+                                ProgressUi.PrintProgress();
                             }
                             else
                             {
                                 Console.WriteLine();
-                                Console.Write("{0}: already installed>", current.Id);
+                                Console.Write("{0}: already installed ", current.Id);
                                 idsLogged.Add(current.Id);
                             }
                         }
@@ -271,7 +271,10 @@ namespace Ormico.DbPatchManager.Logic
                         // add children of current
                         foreach (var c in current.Children)
                         {
-                            graph.AddLast(c);
+                            if (graph.Any(i => string.Equals(i.Id, c.Id)) == false)
+                            {
+                                graph.AddLast(c);
+                            }
                         }
                     }
                 }

@@ -2,7 +2,7 @@
 
 namespace Ormico.DbPatchManager.CLI.CommandLineOptions
 {
-    [Verb("addpatch", HelpText = "Create a new Patch folder and add it to odpm.json")]
+    [Verb("addpatch", HelpText = "Create a new Patch folder and add it to patches.json")]
     class AddPatchCmdLineOptions
     {
         public AddPatchCmdLineOptions()

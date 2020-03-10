@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Ormico.DbPatchManager.CLI": {
+      "commandName": "Project",
+      "commandLineArgs": "build"
+    }
+  }
+}

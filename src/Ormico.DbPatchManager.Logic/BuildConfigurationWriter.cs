@@ -91,14 +91,14 @@ namespace Ormico.DbPatchManager.Logic
                                     where (string)x["id"] == p.Id &&
                                         a.Id == (string)d
                                     select a;
-                        p.DependsOn = cur.ToList();
+                        p.DependsOn = cur.Distinct(new PatchComparer()).ToList();
                         //todo: double check this query
                         var children = from x in o["patches"]
                                        from d in x["dependsOn"]
                                        from a in patches
                                        where (string)d == p.Id && (string)x["id"] == a.Id
                                        select a;
-                        p.Children = children.ToList();
+                        p.Children = children.Distinct(new PatchComparer()).ToList();
                     }
                     rc.patches = patches.ToList();
                 }
@@ -177,7 +177,7 @@ namespace Ormico.DbPatchManager.Logic
                               select new
                               {
                                   id = p.Id,
-                                  dependsOn = p.DependsOn != null?(from d in p.DependsOn
+                                  dependsOn = p.DependsOn != null?(from d in p.DependsOn.Distinct(new PatchComparer())
                                               select d.Id):null
                               }
                 });
