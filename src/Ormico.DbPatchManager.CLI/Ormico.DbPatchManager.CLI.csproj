@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,12 +7,13 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <RepositoryUrl>https://github.com/ormico/dbpatchmanager</RepositoryUrl>
-    <Copyright>Copyright (c) 2019 Zack Moore</Copyright>
+    <Copyright>Copyright (c) 2020 Zack Moore</Copyright>
     <Authors>Zack Moore</Authors>
     <Company>Ormico</Company>
     <Product>Ormico DB Patch Manager CLI</Product>
     <AssemblyName>dbpatch</AssemblyName>
     <PackageId>Ormico.DbPatchManager.CLI</PackageId>
+    <PackageProjectUrl>https://dbpatch.dev</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>

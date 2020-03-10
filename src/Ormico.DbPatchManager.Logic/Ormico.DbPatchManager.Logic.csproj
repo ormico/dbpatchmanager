@@ -1,15 +1,16 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Copyright>Copyright (c) 2019 Zack Moore</Copyright>
+    <Copyright>Copyright (c) 2020 Zack Moore</Copyright>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <Company>Ormico</Company>
     <Authors>Zack Moore</Authors>
     <RepositoryUrl>https://github.com/ormico/dbpatchmanager</RepositoryUrl>
     <Product>Ormico DB Patch Manager Logic</Product>
+    <PackageProjectUrl>https://dbpatch.dev</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
