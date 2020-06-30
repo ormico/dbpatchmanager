@@ -5,7 +5,7 @@ pool:
 variables:
   system.debug: true
   buildConfiguration: 'Release'
-  Version: '2.0.0.$(Build.BuildID)'
+  Version: '2.1.0.$(Build.BuildID)'
 steps:
 - bash: echo v$(Version)
 - task: DotNetCoreCLI@2
@@ -21,5 +21,5 @@ steps:
     artifactName: nuget-artifacts
 - task: PublishBuildArtifacts@1
   inputs:
-    pathtoPublish: 'src/Ormico.DbPatchManager.CLI/bin/release/netcoreapp2.2/publish/'
+    pathtoPublish: 'src/Ormico.DbPatchManager.CLI/bin/release/netcoreapp3.1/publish/'
     artifactName: zip-artifacts

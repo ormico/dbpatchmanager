@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Ormico.DbPatchManager.Common;
 using System;
 using System.Collections.Generic;
 using System.Data.Odbc;
