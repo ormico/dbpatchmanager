@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ormico.DbPatchManager.Logic
+namespace Ormico.DbPatchManager.Common
 {
     public class InstalledPatchInfo
     {
