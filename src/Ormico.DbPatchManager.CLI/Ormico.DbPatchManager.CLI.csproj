@@ -1,9 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <TargetFramework>net5.0</TargetFramework>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <RepositoryUrl>https://github.com/ormico/dbpatchmanager</RepositoryUrl>
@@ -13,12 +13,19 @@
     <Product>Ormico DB Patch Manager CLI</Product>
     <AssemblyName>dbpatch</AssemblyName>
     <PackageId>Ormico.DbPatchManager.CLI</PackageId>
-    <PackageProjectUrl>https://dbpatch.dev</PackageProjectUrl>
+    <PackageProjectUrl>https://dbpatch.dev/</PackageProjectUrl>
+    <Version>2.1.0</Version>
+    <PackageIcon>dbpatch-manager-profile.png</PackageIcon>
+    <Description>Command Line Interface for Database Change managment designed for multi-dev/multi-branch.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="dbpatch" />
     <None Remove="dbpatch.cmd" />
+    <None Include="..\..\assets\dbpatch-manager-profile.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -31,7 +38,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="2.5.0" />
+    <PackageReference Include="CommandLineParser" Version="2.8.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="2.1.2" />
   </ItemGroup>
 
   <ItemGroup>

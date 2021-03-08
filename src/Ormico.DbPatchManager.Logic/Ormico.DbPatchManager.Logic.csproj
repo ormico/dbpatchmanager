@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <Copyright>Copyright (c) 2020 Zack Moore</Copyright>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
@@ -10,21 +10,32 @@
     <Authors>Zack Moore</Authors>
     <RepositoryUrl>https://github.com/ormico/dbpatchmanager</RepositoryUrl>
     <Product>Ormico DB Patch Manager Logic</Product>
-    <PackageProjectUrl>https://dbpatch.dev</PackageProjectUrl>
+    <PackageProjectUrl>https://dbpatch.dev/</PackageProjectUrl>
+    <Version>2.1.0</Version>
+    <PackageIcon>dbpatch-manager-profile.png</PackageIcon>
+    <Description>Logic Library for Database Change managment designed for multi-dev/multi-branch.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="1.60.6" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
-    <PackageReference Include="System.Data.Odbc" Version="4.5.0" />
-    <PackageReference Include="System.IO.Abstractions" Version="6.0.14" />
+    <PackageReference Include="Dapper" Version="2.0.78" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="System.Data.Odbc" Version="5.0.0" />
+    <PackageReference Include="System.IO.Abstractions" Version="13.2.23" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\assets\dbpatch-manager-profile.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
     <None Include="..\..\LICENSE">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ormico.DbPatchManager.Common\Ormico.DbPatchManager.Common.csproj" />
   </ItemGroup>
 
 </Project>

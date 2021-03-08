@@ -11,3 +11,5 @@ src/Ormico.DbPatchManager/bin/*
 src/Ormico.DbPatchManager/obj/*
 bin
 obj
+
+src/Ormico.DbPatchManager.CLI/deb/

@@ -1,4 +1,5 @@
 #!/bin/sh
-dotnet ./dbpatch.dll "$@"
+# if this isn't working try 'dos2unix dbpatch'
+dotnet /usr/local/lib/dbpatch/dbpatch.dll "$@"
 rc=$?
 exit $rc

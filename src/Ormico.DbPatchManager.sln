@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ormico.DbPatchManager.CLI",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ormico.DbPatchManager.Logic", "Ormico.DbPatchManager.Logic\Ormico.DbPatchManager.Logic.csproj", "{009D6D57-82CD-4617-A0B2-83F70D71E44E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ormico.DbPatchManager.Logic.Tests", "Ormico.DbPatchManager.Logic.Tests\Ormico.DbPatchManager.Logic.Tests.csproj", "{59FD6996-4792-4F29-8F31-5873BC61F974}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ormico.DbPatchManager.Common", "Ormico.DbPatchManager.Common\Ormico.DbPatchManager.Common.csproj", "{EB7E7876-55E8-4B9D-82BA-387B90F363F6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ormico.DbPatchManager.Logic.Tests", "Ormico.DbPatchManager.Logic.Tests\Ormico.DbPatchManager.Logic.Tests.csproj", "{6ECAE8E2-1FC5-4BFF-9C45-24C0215E35B6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +25,14 @@ Global
 		{009D6D57-82CD-4617-A0B2-83F70D71E44E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{009D6D57-82CD-4617-A0B2-83F70D71E44E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{009D6D57-82CD-4617-A0B2-83F70D71E44E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{59FD6996-4792-4F29-8F31-5873BC61F974}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{59FD6996-4792-4F29-8F31-5873BC61F974}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{59FD6996-4792-4F29-8F31-5873BC61F974}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{59FD6996-4792-4F29-8F31-5873BC61F974}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB7E7876-55E8-4B9D-82BA-387B90F363F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB7E7876-55E8-4B9D-82BA-387B90F363F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB7E7876-55E8-4B9D-82BA-387B90F363F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB7E7876-55E8-4B9D-82BA-387B90F363F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6ECAE8E2-1FC5-4BFF-9C45-24C0215E35B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6ECAE8E2-1FC5-4BFF-9C45-24C0215E35B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6ECAE8E2-1FC5-4BFF-9C45-24C0215E35B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6ECAE8E2-1FC5-4BFF-9C45-24C0215E35B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
