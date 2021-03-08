@@ -32,7 +32,6 @@
     #wget https://github.com/ormico/dbpatchmanager/releases/download/v2.0.127/dbpatch-v1.0.127.zip -O "$INSTALL_DIR/dbpatch.zip"
     #wget https://github.com/ormico/dbpatchmanager/releases/download/v2.0.127/dbpatch.zip -O "$INSTALL_DIR/dbpatch.zip"
     wget https://github.com/ormico/dbpatchmanager/releases/latest/download/dbpatch.zip -O /usr/local/lib/dbpatch/dbpatch.zip
-    #Schmod +x $INSTALL_DIR
     unzip "$INSTALL_DIR/dbpatch.zip" -d $INSTALL_DIR
     chmod +x "$INSTALL_DIR/dbpatch"
     rm "$INSTALL_DIR/dbpatch.zip"
