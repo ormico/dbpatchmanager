@@ -14,14 +14,22 @@ namespace Ormico.DbPatchManager.Logic
         {
             IDatabase rc = null;
             if(string.Equals(PluginType, "TestDatabase", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(PluginType, typeof(TestDatabase).ToString(), StringComparison.OrdinalIgnoreCase))
+               string.Equals(PluginType, "test", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(PluginType, typeof(TestDatabase).ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 rc = new TestDatabase();
             }
             else if (string.Equals(PluginType, "OdbcDatabase", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(PluginType, typeof(OdbcDatabase).ToString(), StringComparison.OrdinalIgnoreCase))
+                     string.Equals(PluginType, "odbc", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(PluginType, typeof(OdbcDatabase).ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 rc = new OdbcDatabase();
+            }
+            else if (string.Equals(PluginType, "SqlDatabase", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(PluginType, "sqlserver", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(PluginType, typeof(SqlServer.SqlDatabase).ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                rc = new SqlServer.SqlDatabase();
             }
             else
             {

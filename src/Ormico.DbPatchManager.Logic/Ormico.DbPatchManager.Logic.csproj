@@ -19,8 +19,9 @@
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.0.78" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Ormico.DbPatchManager.SqlServer" Version="2.1.0" />
     <PackageReference Include="System.Data.Odbc" Version="5.0.0" />
-    <PackageReference Include="System.IO.Abstractions" Version="13.2.23" />
+    <PackageReference Include="System.IO.Abstractions" Version="13.2.24" />
   </ItemGroup>
 
   <ItemGroup>

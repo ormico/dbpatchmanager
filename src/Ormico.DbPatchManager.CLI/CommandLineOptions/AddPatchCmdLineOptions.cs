@@ -9,7 +9,7 @@ namespace Ormico.DbPatchManager.CLI.CommandLineOptions
         {
         }
 
-        [Option("name", HelpText = "patch name")]
+        [Option('n', "name", HelpText = "patch name")]
         public string Name { get; set; }
     }
 }

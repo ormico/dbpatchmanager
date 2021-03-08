@@ -25,8 +25,14 @@ namespace Ormico.DbPatchManager.Logic
         {
             DbConnectionStringBuilder csb = new DbConnectionStringBuilder();
             csb.ConnectionString = Options.ConnectionString;
-            _fileName = csb["File"] as string;
-
+            if (csb.ContainsKey("File"))
+            {
+                _fileName = csb["File"] as string;
+            }
+            else
+            {
+                _fileName = "test.db";
+            }
             Load();
         }
 
