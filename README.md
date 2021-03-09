@@ -17,7 +17,7 @@ dbpatch doesn't yet have working distribution package or an msi.
 ![image](docs/unblock-zip.png)
 
 ### Linux
-dbpatch doesn't yet have working distribution packages.
+dbpatch doesn't yet have working distribution packages but can be installed using the included install shell script, or download and view the shell script if you wish to perform the steps manually.
 
 ### Prerequisites
 * .NET 5
