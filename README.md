@@ -12,8 +12,6 @@ dbpatch doesn't yet have working distribution package or an msi.
 2. Right click on the zip in Explorer and open the Properties dialog. Click the checkbox to Unblock the zip and then click OK. If you do not see an Unblock checkbox near the bottom of the dialog, then click OK and go to the next step.
 3. Unzip the zip file into a folder where you wish to install it. For example `C:\Program Files\dbpatch`
 4. Add the folder to your PATH.
-5. In the folder you unzipped into, edit `dbpatch.cmd`. If you unzipped into a restricted folder such as Program Files you will need to open your text editor in Administrator mode.
-6. In `dbpatch.cmd` change the line `dotnet .\dbpatch.dll %*` to `dotnet "(full path)\dbpatch.dll" %*` where (full path) is the full path fo dbpatch.dll. For example, `dotnet "C:\Program Files\dbpatch\dbpatch.dll" %*`
 
 ![image](docs/unblock-zip.png)
 
