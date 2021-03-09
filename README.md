@@ -44,7 +44,7 @@ If you wish to install a version other than latest, each Release comes with an i
 Database changes are deployed using the `build` command. DB Patch Manager will check the database to determine which patches have already been installed before installing new patches in the correct order.
 
 ## Create new db project
-```PS C:\MyProject> .\dbpatch init --dbtype "Ormico.DbPatchManager.SqlServer.dll, Ormico.DbPatchManager.SqlServer.SqlDatabase"```
+```MyProject> dbpatch init --dbtype sqlserver```
 
 This will create a new project file named `patches.json` and initilize it to the SQL Server plugin.
 
@@ -59,9 +59,9 @@ Create a new file named `patches.local.json` When you are a adding files to sour
 Each developer would enter their local connection string. When deploying, you would enter the production server's connection string.
 
 ## Add a database patch
-```PS C:\MyProject> .\dbpatch addpatch --name TestPatch```
+```MyProject> dbpatch addpatch -n TestPatch```
 
-Creates a folder for the patch in `C:\MyProject\Patches\` and adds the patch to the patches.json file. The folder is named using a date time string and a random number and the name. For example something like `201708011412-2403-testpatch`. User can place .sql files in the patch folder and they will be run when the patch is applied. If the user includes more than one patch file, they are run in alphabetical order.
+Creates a folder for the patch in `...\MyProject\Patches\` and adds the patch to the patches.json file. The folder is named using a date time string and a random number and the name. For example something like `201708011412-2403-testpatch`. User can place .sql files in the patch folder and they will be run when the patch is applied. If the user includes more than one patch file, they are run in alphabetical order.
 
 ## Add a database code item
 Code items are database items that are applied on each build instead of only once like patches. Typically code items are Stored Procedures, Functions, Views, and Triggers.
@@ -85,7 +85,7 @@ The default list of code file extensions and the order they load is:
 * .trigger3.sql - Trigger
 
 ## Build Database
-```PS C:\MyProject> .\dbpatch build```
+```MyProject> dbpatch build```
 
 Applies all missing patches and runs all code files.
 
