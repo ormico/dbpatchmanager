@@ -41,9 +41,6 @@ If you install dbpatch to somewhere other than `/usr/local/lib/dbpatch` you may 
 
 If you wish to install a version other than latest, each Release comes with an install shell script specific for that version starting with v2.1.1
 
-## Build
-Database changes are deployed using the `build` command. DB Patch Manager will check the database to determine which patches have already been installed before installing new patches in the correct order.
-
 ## Create new db project
 ```MyProject> dbpatch init --dbtype sqlserver```
 
