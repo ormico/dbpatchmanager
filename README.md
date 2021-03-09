@@ -1,6 +1,8 @@
+![rect-logo-small](https://user-images.githubusercontent.com/1731364/110421365-60dec400-806b-11eb-9a53-d783ca935042.png)
 # DB Patch Manager
 Database development tool for change control.
-v2.0 has been updated to .NET Core for cross platform support.
+
+v2 has been updated to .NET Core for cross platform support.
 
 DB Patch Manager supports database development across multiple source control branches by tracking the dependencies of each patch and installing them in the correct order. When a developer adds a new patch, that patch depends on all the previous patches recorded in that branch. When branches are merged the `patches.json` file is merged to include all patches and the dependency tree from each branch. 
 
@@ -16,7 +18,7 @@ dbpatch doesn't yet have working distribution package or an msi.
 ![image](docs/unblock-zip.png)
 
 ### Linux
-dbpatch doesn't yet have working distribution packages.
+dbpatch doesn't yet have working distribution packages but can be installed using the included install shell script, or download and view the shell script if you wish to perform the steps manually.
 
 ### Prerequisites
 * .NET 5
@@ -40,11 +42,8 @@ If you install dbpatch to somewhere other than `/usr/local/lib/dbpatch` you may 
 
 If you wish to install a version other than latest, each Release comes with an install shell script specific for that version starting with v2.1.1
 
-## Build
-Database changes are deployed using the `build` command. DB Patch Manager will check the database to determine which patches have already been installed before installing new patches in the correct order.
-
 ## Create new db project
-```PS C:\MyProject> .\dbpatch init --dbtype "Ormico.DbPatchManager.SqlServer.dll, Ormico.DbPatchManager.SqlServer.SqlDatabase"```
+```MyProject> dbpatch init --dbtype sqlserver```
 
 This will create a new project file named `patches.json` and initilize it to the SQL Server plugin.
 
@@ -59,9 +58,9 @@ Create a new file named `patches.local.json` When you are a adding files to sour
 Each developer would enter their local connection string. When deploying, you would enter the production server's connection string.
 
 ## Add a database patch
-```PS C:\MyProject> .\dbpatch addpatch --name TestPatch```
+```MyProject> dbpatch addpatch -n TestPatch```
 
-Creates a folder for the patch in `C:\MyProject\Patches\` and adds the patch to the patches.json file. The folder is named using a date time string and a random number and the name. For example something like `201708011412-2403-testpatch`. User can place .sql files in the patch folder and they will be run when the patch is applied. If the user includes more than one patch file, they are run in alphabetical order.
+Creates a folder for the patch in `...\MyProject\Patches\` and adds the patch to the patches.json file. The folder is named using a date time string and a random number and the name. For example something like `201708011412-2403-testpatch`. User can place .sql files in the patch folder and they will be run when the patch is applied. If the user includes more than one patch file, they are run in alphabetical order.
 
 ## Add a database code item
 Code items are database items that are applied on each build instead of only once like patches. Typically code items are Stored Procedures, Functions, Views, and Triggers.
@@ -85,7 +84,7 @@ The default list of code file extensions and the order they load is:
 * .trigger3.sql - Trigger
 
 ## Build Database
-```PS C:\MyProject> .\dbpatch build```
+```MyProject> dbpatch build```
 
 Applies all missing patches and runs all code files.
 
