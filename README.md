@@ -18,7 +18,7 @@ dbpatch doesn't yet have working distribution package or an msi.
 ### Linux
 dbpatch doesn't yet have working distribution packages.
 
-###Prerequisites
+### Prerequisites
 * .NET 5
 * wget
 * unzip
