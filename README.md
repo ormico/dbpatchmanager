@@ -1,3 +1,4 @@
+![rect-logo-small](https://user-images.githubusercontent.com/1731364/110421365-60dec400-806b-11eb-9a53-d783ca935042.png)
 # DB Patch Manager
 Database development tool for change control.
 
