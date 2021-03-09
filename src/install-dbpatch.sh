@@ -29,8 +29,7 @@
 
     mkdir $INSTALL_DIR
     # make release zip file dbpatch.zip . don't put version in filename. that way installer won't have to be updated for each version
-    #wget https://github.com/ormico/dbpatchmanager/releases/download/v2.0.127/dbpatch-v1.0.127.zip -O "$INSTALL_DIR/dbpatch.zip"
-    #wget https://github.com/ormico/dbpatchmanager/releases/download/v2.0.127/dbpatch.zip -O "$INSTALL_DIR/dbpatch.zip"
+    #wget https://github.com/ormico/dbpatchmanager/releases/download/v2.1.1/dbpatch.zip -O "$INSTALL_DIR/dbpatch.zip"
     wget https://github.com/ormico/dbpatchmanager/releases/latest/download/dbpatch.zip -O /usr/local/lib/dbpatch/dbpatch.zip
     unzip "$INSTALL_DIR/dbpatch.zip" -d $INSTALL_DIR
     chmod +x "$INSTALL_DIR/dbpatch"

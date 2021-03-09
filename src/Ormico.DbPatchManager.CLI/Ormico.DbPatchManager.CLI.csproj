@@ -14,7 +14,7 @@
     <AssemblyName>dbpatch</AssemblyName>
     <PackageId>Ormico.DbPatchManager.CLI</PackageId>
     <PackageProjectUrl>https://dbpatch.dev/</PackageProjectUrl>
-    <Version>2.1.0</Version>
+    <Version>2.1.1</Version>
     <PackageIcon>dbpatch-manager-profile.png</PackageIcon>
     <Description>Command Line Interface for Database Change managment designed for multi-dev/multi-branch.</Description>
   </PropertyGroup>

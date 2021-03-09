@@ -4,6 +4,45 @@ v2.0 has been updated to .NET Core for cross platform support.
 
 DB Patch Manager supports database development across multiple source control branches by tracking the dependencies of each patch and installing them in the correct order. When a developer adds a new patch, that patch depends on all the previous patches recorded in that branch. When branches are merged the `patches.json` file is merged to include all patches and the dependency tree from each branch. 
 
+## Installing
+### Windows
+dbpatch doesn't yet have working distribution package or an msi.
+
+1. Download the zip from the latest Release.
+2. Right click on the zip in Explorer and open the Properties dialog. Click the checkbox to Unblock the zip and then click OK. If you do not see an Unblock checkbox near the bottom of the dialog, then click OK and go to the next step.
+3. Unzip the zip file into a folder where you wish to install it. For example `C:\Program Files\dbpatch`
+4. Add the folder to your PATH.
+5. In the folder you unzipped into, edit `dbpatch.cmd`. If you unzipped into a restricted folder such as Program Files you will need to open your text editor in Administrator mode.
+6. In `dbpatch.cmd` change the line `dotnet .\dbpatch.dll %*` to `dotnet "(full path)\dbpatch.dll" %*` where (full path) is the full path fo dbpatch.dll. For example, `dotnet "C:\Program Files\dbpatch\dbpatch.dll" %*`
+
+![image](docs/unblock-zip.png)
+
+### Linux
+dbpatch doesn't yet have working distribution packages.
+
+###Prerequisites
+* .NET 5
+* wget
+* unzip
+
+```
+wget -qO- https://github.com/ormico/dbpatchmanager/releases/latest/download/install-dbpatch.sh | bash
+```
+
+or
+
+```
+wget -q https://github.com/ormico/dbpatchmanager/releases/latest/download/install-dbpatch.sh -O install-dbpatch.sh
+chmod +x install-dbpatch.sh
+./install-dbpatch.sh
+rm install-dbpatch.sh
+```
+
+If you install dbpatch to somewhere other than `/usr/local/lib/dbpatch` you may need to modify `/usr/local/lib/dbpatch/dbpatch` This file is a shell script which wraps the call to the .net commandline which is used to run dbpatch.dll.
+
+If you wish to install a version other than latest, each Release comes with an install shell script specific for that version starting with v2.1.1
+
+## Build
 Database changes are deployed using the `build` command. DB Patch Manager will check the database to determine which patches have already been installed before installing new patches in the correct order.
 
 ## Create new db project
