@@ -96,7 +96,7 @@ dbpatch's configution system supports splitting the configuration information in
 
 In this step, we are going to create the second file `patches.local.json`. Where `patches.json` is checked into source control, `patches.local.json` is designed not to be checked in. The local file is where workstation or server specific settings are specified. When dbpatch runs, these two configuration files are merged with `patches.local.json` overriding any settings made in `patches.json`. While you can override any setting, typically the `ConnectionString` is the most common setting used in the local file.
 
-Using a text editor, create a file in the database project folder named `patches.local.json`. The contents of the file should look like the following, but in place of this connection string specify the Connection String to your development database. This is usually a database and server running on your local workstation.
+Create a file in the database project folder named `patches.local.json`. The contents of the file should look like the following, but in place of this connection string specify the connection string to your development database. This is usually a database and server running on your local workstation.
 
 ```
 {
@@ -104,33 +104,50 @@ Using a text editor, create a file in the database project folder named `patches
 }
 ```
 
+For our imaginary team, lets create a separate local file for each developer. We can swap this file in and out as we simulate commands for each individual. Create the following three files using the correct connection strings for your workstation.
+
+`patches.ann-local.json`
+```
+{
+    "ConnectionString": "Server=.;Database=dbpatch-example-ann;Trusted_Connection=True;"
+}
+```
+
+`patches.bettie-local.json`
+```
+{
+    "ConnectionString": "Server=.;Database=dbpatch-example-bettie;Trusted_Connection=True;"
+}
+```
+
+`patches.casey-local.json`
+```
+{
+    "ConnectionString": "Server=.;Database=dbpatch-example-casey;Trusted_Connection=True;"
+}
+```
+
 ### Ignoring patches.local.json and checking in changes in source control
+The file `patches.local.json` should be added to `.gitignore` to prevent it from being checked in. In addition to containing sensitive login information, `patches.local.json` is used to customize the login for each environment.
+
+For this example we also want to ignore the other patches local files we created for each imaginary team member.
+
+Create a `.gitignore` file that contains the following entries.
+
+`.gitignore`
+```
+patches.local.json
+patches.ann-local.json
+patches.bettie-local.json
+patches.casey-local.json
+```
+
+Check in the files we have created so far (except for the ones that are ignored).
 
 ```
-echo "patches.local.json" > .gitignore
-git branch casey/db-initial-setup
-git checkout casey/db-initial-setup
 git stage *
-git commit -m "setup dbpatch project"
-
-git checkout main
-//todo merge casey's branch into main
+git commit -m "init dbpatch project"
 ```
-
-git commit output:
-//todo: update example w/o testdb & correct patch name
-```
-[main (root-commit) 7d7f6e3] first
- 8 files changed, 77 insertions(+)
- create mode 100644 .gitignore
- create mode 100644 Patches/202103082324-1408-p2/p.sql
- create mode 100644 Patches/202103082324-2009-p1/p.sql
- create mode 100644 Patches/202103082324-7288-p3/p.sql
- create mode 100644 Patches/202103082324-9737-p4/p.sql
- create mode 100644 patches.json
- create mode 100644 sqltools_20210308232445_31788.log
- create mode 100644 test.db
- ```
 
 ## Creating the first Patches
 

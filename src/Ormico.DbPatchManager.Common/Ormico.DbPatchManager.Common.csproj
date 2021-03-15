@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -13,6 +13,7 @@
     <Description>Classes and interfaces used to implement a DB Patch Manager Database Module.</Description>
     <Copyright>Copyright (c) 2020 Zack Moore</Copyright>
     <PackageProjectUrl>https://dbpatch.dev/</PackageProjectUrl>
+    <Version>2.1.2</Version>
   </PropertyGroup>
 
   <ItemGroup>

@@ -11,18 +11,18 @@
     <RepositoryUrl>https://github.com/ormico/dbpatchmanager</RepositoryUrl>
     <Product>Ormico DB Patch Manager Logic</Product>
     <PackageProjectUrl>https://dbpatch.dev/</PackageProjectUrl>
-    <Version>2.1.1</Version>
+    <Version>2.1.2</Version>
     <PackageIcon>dbpatch-manager-profile.png</PackageIcon>
     <Description>Logic Library for Database Change managment designed for multi-dev/multi-branch.</Description>
-    <AssemblyVersion>2.1.1.0</AssemblyVersion>
+    <AssemblyVersion>2.1.2.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.0.78" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="Ormico.DbPatchManager.SqlServer" Version="2.1.0" />
+    <PackageReference Include="Ormico.DbPatchManager.SqlServer" Version="2.1.1" />
     <PackageReference Include="System.Data.Odbc" Version="5.0.0" />
-    <PackageReference Include="System.IO.Abstractions" Version="13.2.24" />
+    <PackageReference Include="System.IO.Abstractions" Version="13.2.25" />
   </ItemGroup>
 
   <ItemGroup>
