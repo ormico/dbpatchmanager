@@ -151,7 +151,50 @@ git commit -m "init dbpatch project"
 
 ## Creating the first Patches
 
-```dbpatch addpatch -n first-patch```
+Before allowing the other developers to begin working on the database, Casey wants to add a patch setting up all the database properties and settings.
+
+```dbpatch addpatch -n config-database```
+
+This will add the first patch to `patches.json` and creates a new folder under the `Patches` folder. The patch id is based on the local date and time, a random number, and the patch name pased on the command line. In our example, the patch id is `202103141849-3260-config-database`. 
+
+To find the new patch id list the contents of the `Patches` director and find the newly created patch folder.
+
+In the new patch folder which is named `Patches/202103141849-3260-config-database` create a new SQL file named `config-db.sql`. In this file, enter any `ALTER DATABASE` commands along with any other initial database setup.
+
+Here is a sample of what the file may look like:
+```
+ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 150
+GO
+ALTER DATABASE CURRENT SET ANSI_NULL_DEFAULT OFF 
+GO
+ALTER DATABASE CURRENT SET ANSI_NULLS OFF 
+GO
+ALTER DATABASE CURRENT SET ANSI_PADDING OFF 
+GO
+ALTER DATABASE CURRENT SET ANSI_WARNINGS OFF 
+GO
+ALTER DATABASE CURRENT SET ARITHABORT OFF 
+GO
+ALTER DATABASE CURRENT SET AUTO_CLOSE OFF 
+GO
+ALTER DATABASE CURRENT SET AUTO_SHRINK OFF
+GO
+declare @dbname nvarchar(128) = db_name()
+EXEC sys.sp_db_vardecimal_storage_format @dbname, N'ON'
+GO
+...
+```
+
+### Note about Patch folders
+In patch folders, developers can create any number of database script files. These files will be sorted alphabetically and executed in order against the database. It is a good practice to use just one script file per patch when your database supports this, but if you need to create multiple files another best practice is to name the files in such a way as to both ensure the order and make it obvious to all developers what order the files will execute in. For example, numbering the files ensures the sort order and is obvious to other developers. 
+
+An example of this patter might look like:
+```
+1-create-table.sql
+2-add-indexes.sql
+```
+
+
 
 ```202103082324-1408-first-patch```
 ```
