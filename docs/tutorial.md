@@ -2,6 +2,8 @@
 ## Intro
 dbpatch is a tool for database change management. The purpose of the tool is to manage database change patches and code assets. These patches and code assets can then be added to and modified in multiple source control branches, merged, and applied to a database in the proper order.
 
+//todo: put this example db project in its own repo
+
 ## Installing
 Before using dbpatch, it must be installed on a workstation or server.
 
@@ -194,25 +196,154 @@ An example of this patter might look like:
 2-add-indexes.sql
 ```
 
+### Building the Database after Schema additions
+After Casey created the first database schema patch, the project should be built in order to update the developer's local database and prove that the patch is correct before checking in the changes.
 
+To build Casey's database, we need to use the correct `patches.local.json` file. Use the following commands to copy `patches.casey-local.json` to `patches.local.json` overwriting any existing file.
 
-```202103082324-1408-first-patch```
 ```bash
-git branch casey/db-initial-setup
-git checkout casey/db-initial-setup
+#the following works in Bash and PowerShell
+cp patches.casey-local.json patches.local.json
+```
+
+To build the project, run the following command:
+```bash
+dbpatch build
+```
+Output like the following will be displayed:
+```
+> dbpatch build
+
+202103141849-3260-config-database
+Patches\202103141849-3260-config-database\config-db.sql
+```
+
+If there are no errors and the schema in the database has the correct changes, the patch should now be checked in.
+
+```
 git stage *
-git commit -m "first patch"
+git commit -m "Casey's initial db patch"
+```
+
+## Taking a look at the InstalledPatches table
+Before moving to the next step let's take a look at the `InstalledPatches` table. 
+
+`dbo.InstalledPatches` was not included in the patch sql that Casey created. `InstalledPatches` is an artifact created by dbpatch and the SQL Server module to track which patches have already been installed in a particular instance of the database. 
+
+Each database module written for dbpatch can implement this tracking in it's own way that is most appropriate for that database type. The SQL Server module does this by creating a table and keeping a record for each patch that is installed. This can be overridden by providing an alternative SQL Script for reading and writing this information.
+
+----> STOPED HERE
+//todo: add to intro a description of the example db project we are creating 'scavenger hunt'
+
+## Merging schema changes from another user
+Casey now has the database project and repository ready for other developers to start contributing.
+
+Ann is working on the tables for tracking each Scavenger Hunt, the Teams participating, and each Treasure that can be found. Her design looks like this.
+
+![db diagram showing Hunt Treasure and Team tables](tutorial-db-hunt-diagram1.png)
+
+Ann begins by creating a branch from main and switching to that new branch.
+```
+git checkout -b feature/ann-create-hunt-tables
+```
+The next step is for Ann to create a new Patch and add her schema change file. Because Ann branched from main, she already has the initial patch that Casey made.
+```bash
+dbpatch addpatch -n create-hunt-tables
+```
+Listing the contents of `Patches` shows our new Patch folder
+```
+> ls Patches
+    Directory: C:\Users\ormico\Projects\dbpatch-example\Patches
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d----           3/14/2021  6:53 PM                202103141849-3260-config-database
+d----           3/14/2021 11:47 PM                202103142347-5594-create-hunt-tables
+```
+
+Ann's schema changes
+```
+CREATE TABLE [dbo].[Hunt]
+(
+	[HuntId] [int] NOT NULL,
+	[HuntName] [nvarchar](100) NOT NULL,
+	[StartDate] [datetime] NOT NULL,
+	[EndDate] [datetime] NOT NULL,
+    CONSTRAINT [PK_Hunt] PRIMARY KEY CLUSTERED([HuntId] ASC)
+)
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_Hunt] ON [dbo].[Hunt]
+(
+	[HuntName] ASC
+)
+GO
+
+CREATE TABLE [dbo].[Team]
+(
+	[TeamId] [int] NOT NULL,
+	[TeamName] [nvarchar](50) NOT NULL,
+	[HuntId] [int] NOT NULL,
+	[SignupDate] [date] NOT NULL,
+    CONSTRAINT [PK_Team] PRIMARY KEY CLUSTERED([TeamId] ASC)
+)
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_Team] ON [dbo].[Team]
+(
+	[HuntId] ASC,
+	[TeamName] ASC
+)
+GO
+
+ALTER TABLE [dbo].[Team] WITH CHECK ADD CONSTRAINT [FK_Team_Hunt] FOREIGN KEY([HuntId])
+REFERENCES [dbo].[Hunt] ([HuntId])
+GO
+
+ALTER TABLE [dbo].[Team] CHECK CONSTRAINT [FK_Team_Hunt]
+GO
+
+CREATE TABLE [dbo].[Treasure]
+(
+	[TreasureId] [int] NOT NULL,
+	[TrasureName] [nvarchar](100) NOT NULL,
+	[Description] [nvarchar](500) NULL,
+	[Clue] [nvarchar](max) NOT NULL,
+	[HuntId] [int] NOT NULL,
+	[LocationStreetAddress] [nvarchar](200) NULL,
+	[LocationLatitudeLongitude] [nvarchar](200) NULL,
+    CONSTRAINT [PK_Treasure] PRIMARY KEY CLUSTERED([TreasureId] ASC)
+)
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_Treasure] ON [dbo].[Treasure]
+(
+	[HuntId] ASC,
+	[TrasureName] ASC
+)
+GO
+
+ALTER TABLE [dbo].[Treasure] WITH CHECK ADD CONSTRAINT [FK_Treasure_Hunt] FOREIGN KEY([HuntId])
+REFERENCES [dbo].[Hunt]([HuntId])
+GO
+
+ALTER TABLE [dbo].[Treasure] CHECK CONSTRAINT [FK_Treasure_Hunt]
+GO
 ```
 
 
-//todo: decide what kind of db we are building and create the final whole project in an example repo or folder. make a schema diagram and post it in this example
+Ann build
+```
+cp patches.ann-local.json patches.local.json
+dbpatch build
 
-### Building the Database after Schema additions
+202103141849-3260-config-database
+Patches\202103141849-3260-config-database\config-db.sql
+202103142347-5594-create-hunt-tables
+Patches\202103142347-5594-create-hunt-tables\hunt-team-treasure-tables.sql
+```
 
-//todo: make sure dbpatch doesn't do anything if patches.json is not in current folder
-```dbpatch build```
 
-## Merging schema changes from another user
 ### Building the Database after Schema merge
 
 ## Examining InstalledPatches table
