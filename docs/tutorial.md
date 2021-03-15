@@ -32,11 +32,11 @@ dbpatch doesn't yet have working distribution packages but can be installed usin
 
 #### Steps
 Using `wget`, the install shell script can be downloaded and piped to bash to perform the install. This is the quickest way to get dbpatch installed, but it requires trusting the install script.
-```
+```bash
 wget -qO- https://github.com/ormico/dbpatchmanager/releases/latest/download/install-dbpatch.sh | sudo bash
 ```
 Or, you can download the install script and review it's contents before running.
-```
+```bash
 #download install-dbpatch.sh
 wget -q https://github.com/ormico/dbpatchmanager/releases/latest/download/install-dbpatch.sh -O install-dbpatch.sh
 #review install-dbpatch.sh code before executing
@@ -67,7 +67,7 @@ Our Imaginary Team:
 ## Creating a new Project (SQL Server)
 To get started, create a folder for the the database project. In that folder run `dbpatch init` and specify the `--dbtype` parameter. For this example, specify a MS SQL Server database by using `sqlserver` as the dbtype value.
 
-```
+```bash
 mkdir mydb
 cd mydb
 git init
@@ -83,7 +83,7 @@ dbpatch requires that a database exists for it to connect to. dbpatch will not c
 
 In our example, we are using `sqlcmd` from the command line to create our example database but any SQL Server tool that can execute scripts will do. Execute the following from the command line.
 
-```
+```bash
 sqlcmd -S . -Q "create database [dbpatch-example-ann]"
 sqlcmd -S . -Q "create database [dbpatch-example-bettie]"
 sqlcmd -S . -Q "create database [dbpatch-example-casey]"
@@ -98,7 +98,7 @@ In this step, we are going to create the second file `patches.local.json`. Where
 
 Create a file in the database project folder named `patches.local.json`. The contents of the file should look like the following, but in place of this connection string specify the connection string to your development database. This is usually a database and server running on your local workstation.
 
-```
+```json
 {
     "ConnectionString": "Server=.;Database=dbpatch-example-casey;Trusted_Connection=True;"
 }
@@ -107,21 +107,21 @@ Create a file in the database project folder named `patches.local.json`. The con
 For our imaginary team, lets create a separate local file for each developer. We can swap this file in and out as we simulate commands for each individual. Create the following three files using the correct connection strings for your workstation.
 
 `patches.ann-local.json`
-```
+```json
 {
     "ConnectionString": "Server=.;Database=dbpatch-example-ann;Trusted_Connection=True;"
 }
 ```
 
 `patches.bettie-local.json`
-```
+```json
 {
     "ConnectionString": "Server=.;Database=dbpatch-example-bettie;Trusted_Connection=True;"
 }
 ```
 
 `patches.casey-local.json`
-```
+```json
 {
     "ConnectionString": "Server=.;Database=dbpatch-example-casey;Trusted_Connection=True;"
 }
@@ -135,7 +135,7 @@ For this example we also want to ignore the other patches local files we created
 Create a `.gitignore` file that contains the following entries.
 
 `.gitignore`
-```
+```bash
 patches.local.json
 patches.ann-local.json
 patches.bettie-local.json
@@ -144,7 +144,7 @@ patches.casey-local.json
 
 Check in the files we have created so far (except for the ones that are ignored).
 
-```
+```bash
 git stage *
 git commit -m "init dbpatch project"
 ```
@@ -162,7 +162,7 @@ To find the new patch id list the contents of the `Patches` director and find th
 In the new patch folder which is named `Patches/202103141849-3260-config-database` create a new SQL file named `config-db.sql`. In this file, enter any `ALTER DATABASE` commands along with any other initial database setup.
 
 Here is a sample of what the file may look like:
-```
+```sql
 ALTER DATABASE CURRENT SET COMPATIBILITY_LEVEL = 150
 GO
 ALTER DATABASE CURRENT SET ANSI_NULL_DEFAULT OFF 
@@ -189,7 +189,7 @@ GO
 In patch folders, developers can create any number of database script files. These files will be sorted alphabetically and executed in order against the database. It is a good practice to use just one script file per patch when your database supports this, but if you need to create multiple files another best practice is to name the files in such a way as to both ensure the order and make it obvious to all developers what order the files will execute in. For example, numbering the files ensures the sort order and is obvious to other developers. 
 
 An example of this patter might look like:
-```
+```bash
 1-create-table.sql
 2-add-indexes.sql
 ```
@@ -197,7 +197,7 @@ An example of this patter might look like:
 
 
 ```202103082324-1408-first-patch```
-```
+```bash
 git branch casey/db-initial-setup
 git checkout casey/db-initial-setup
 git stage *
