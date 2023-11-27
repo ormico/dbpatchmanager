@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.28803.352
@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ormico.DbPatchManager.Logic
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ormico.DbPatchManager.Common", "Ormico.DbPatchManager.Common\Ormico.DbPatchManager.Common.csproj", "{EB7E7876-55E8-4B9D-82BA-387B90F363F6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ormico.DbPatchManager.Logic.Tests", "Ormico.DbPatchManager.Logic.Tests\Ormico.DbPatchManager.Logic.Tests.csproj", "{6ECAE8E2-1FC5-4BFF-9C45-24C0215E35B6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ormico.DbPatchManager.Logic.Tests", "Ormico.DbPatchManager.Logic.Tests\Ormico.DbPatchManager.Logic.Tests.csproj", "{6ECAE8E2-1FC5-4BFF-9C45-24C0215E35B6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

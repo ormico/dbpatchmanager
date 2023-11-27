@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RepositoryUrl>https://github.com/ormico/dbpatchmanager</RepositoryUrl>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <Authors>Zack Moore</Authors>
@@ -11,20 +10,20 @@
     <PackageIcon>dbpatch-manager-profile.png</PackageIcon>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>Classes and interfaces used to implement a DB Patch Manager Database Module.</Description>
-    <Copyright>Copyright (c) 2020 Zack Moore</Copyright>
+    <Copyright>Copyright (c) 2023 Zack Moore</Copyright>
     <PackageProjectUrl>https://dbpatch.dev/</PackageProjectUrl>
-    <Version>2.1.2</Version>
+    <Version>2.2.0</Version>
   </PropertyGroup>
-
   <ItemGroup>
     <None Include="..\..\assets\dbpatch-manager-profile.png">
       <Pack>True</Pack>
-      <PackagePath></PackagePath>
+      <PackagePath>
+      </PackagePath>
     </None>
     <None Include="..\..\LICENSE">
       <Pack>True</Pack>
-      <PackagePath></PackagePath>
+      <PackagePath>
+      </PackagePath>
     </None>
   </ItemGroup>
-
 </Project>
