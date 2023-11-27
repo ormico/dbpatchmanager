@@ -1,43 +1,40 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <TargetFramework>net8.0</TargetFramework>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Copyright>Copyright (c) 2020 Zack Moore</Copyright>
+    <Copyright>Copyright (c) 2023 Zack Moore</Copyright>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <Company>Ormico</Company>
     <Authors>Zack Moore</Authors>
     <RepositoryUrl>https://github.com/ormico/dbpatchmanager</RepositoryUrl>
     <Product>Ormico DB Patch Manager Logic</Product>
     <PackageProjectUrl>https://dbpatch.dev/</PackageProjectUrl>
-    <Version>2.1.2</Version>
+    <Version>2.2.0</Version>
     <PackageIcon>dbpatch-manager-profile.png</PackageIcon>
     <Description>Logic Library for Database Change managment designed for multi-dev/multi-branch.</Description>
     <AssemblyVersion>2.1.2.0</AssemblyVersion>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.0.78" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Dapper" Version="2.1.24" />
     <PackageReference Include="Ormico.DbPatchManager.SqlServer" Version="2.1.1" />
-    <PackageReference Include="System.Data.Odbc" Version="5.0.0" />
-    <PackageReference Include="System.IO.Abstractions" Version="13.2.25" />
+    <PackageReference Include="System.IO.Abstractions" Version="19.2.87" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Data.Odbc" Version="8.0.0" />
   </ItemGroup>
-
   <ItemGroup>
     <None Include="..\..\assets\dbpatch-manager-profile.png">
       <Pack>True</Pack>
-      <PackagePath></PackagePath>
+      <PackagePath>
+      </PackagePath>
     </None>
     <None Include="..\..\LICENSE">
       <Pack>True</Pack>
-      <PackagePath></PackagePath>
+      <PackagePath>
+      </PackagePath>
     </None>
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Ormico.DbPatchManager.Common\Ormico.DbPatchManager.Common.csproj" />
   </ItemGroup>
-
 </Project>
