@@ -1,11 +1,10 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Ormico.DbPatchManager.Common;
 using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -14,16 +13,17 @@ namespace Ormico.DbPatchManager.Logic
     /// </summary>
     public class BuildConfigurationWriter
     {
-        public BuildConfigurationWriter(string filePath, string localFilePath)
+        public BuildConfigurationWriter(string filePath, string localFilePath, IFileSystem fileSystem = null)
         {
             _filePath = filePath;
             _localFilePath = localFilePath;
+            _io = fileSystem ?? new FileSystem();
         }
 
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
-        FileSystem _io = new FileSystem();
+        IFileSystem _io;
 
         /// <summary>
         /// Path and name of file to read and write.
@@ -48,8 +48,11 @@ namespace Ormico.DbPatchManager.Logic
             DatabaseBuildConfiguration rc = null;
             if(_io.File.Exists(_filePath))
             {
-                //rc = JsonConvert.DeserializeObject<DatabaseBuildConfiguration>(_io.File.ReadAllText(_filePath), _jsonSettings);
                 var o = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_filePath));
+
+                var schemaVer = DetectSchemaVersion(o);
+                if (schemaVer == SchemaMapper.PatchesSchemaVersionEnum.Unknown)
+                    throw new DbPatchManagerException("Cannot detect patches.json schema version");
 
                 if (_io.File.Exists(_localFilePath))
                 {
@@ -107,6 +110,35 @@ namespace Ormico.DbPatchManager.Logic
             {
                 throw new ApplicationException("Configuration file does not exist. Call init first.");
             }
+            return rc;
+        }
+
+        public SchemaMapper.PatchesSchemaVersionEnum DetectSchemaVersion(Newtonsoft.Json.Linq.JObject o)
+        {
+            //todo: write unit tests for this method and SchemaMapper class
+            var mapper = new SchemaMapper();
+            var rc = SchemaMapper.PatchesSchemaVersionEnum.Unknown;
+            var schemaVersionProperty = o.Property("schema");
+
+            if (schemaVersionProperty != null)
+            {
+                if (!string.IsNullOrWhiteSpace((string)schemaVersionProperty.Value))
+                {
+                    string schemaStr = (string)schemaVersionProperty.Value;
+                    rc = mapper.MapSchemaVersion(schemaStr);
+                }
+            }
+            else
+            {
+                // if no schemaVersion property then try to detect if v1 by checking other properties
+                var patchesProperty = o.Property("patches");
+
+                if (patchesProperty != null)
+                {
+                    rc = SchemaMapper.PatchesSchemaVersionEnum.DbPatchV1;
+                }
+            }
+
             return rc;
         }
 
