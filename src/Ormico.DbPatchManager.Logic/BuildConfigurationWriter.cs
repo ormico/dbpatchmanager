@@ -9,10 +9,16 @@ using System.Linq;
 namespace Ormico.DbPatchManager.Logic
 {
     /// <summary>
-    /// Readn and Write DatabaseBuildConfiguration to storage.
+    /// Read and Write DatabaseBuildConfiguration to storage.
     /// </summary>
     public class BuildConfigurationWriter
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filePath">Path and filename for main settings file.</param>
+        /// <param name="localFilePath">Path and filename for local override settings file.</param>
+        /// <param name="fileSystem">File system object for unit testing.</param>
         public BuildConfigurationWriter(string filePath, string localFilePath, IFileSystem fileSystem = null)
         {
             _filePath = filePath;
@@ -142,11 +148,18 @@ namespace Ormico.DbPatchManager.Logic
             return rc;
         }
 
+        /// <summary>
+        /// Write DatabaseBuildConfiguration data to file path passed to constructor.
+        /// This method is used for all edits which currently include init and add patch.
+        /// The algorithm currently used writes the entire file each time. The algorithm decides whether to 
+        /// write each property by checking first to see if the property exists in the local file. If it does
+        /// not exist in the local file then the property is written to the main file.
+        /// </summary>
+        /// <param name="buildConfiguration"></param>
         public void Write(DatabaseBuildConfiguration buildConfiguration)
         {
             JObject data;
 
-            //todo: if local file exists, don't write values to patches.json if value exists in patches.local.json
             if (_io.File.Exists(_localFilePath))
             {
                 var localO = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_localFilePath));
@@ -196,7 +209,6 @@ namespace Ormico.DbPatchManager.Logic
             }
             else
             {
-                //string data = JsonConvert.SerializeObject(buildConfiguration, Formatting.Indented, _jsonSettings);
                 data = JObject.FromObject(new
                 {
                     DatabaseType = buildConfiguration.DatabaseType,
@@ -215,6 +227,9 @@ namespace Ormico.DbPatchManager.Logic
                 });
             }
 
+            // write all text creates the file if it doesn't exist
+            // but it also truncates the file before writing if it does exist
+            // so there will be no data left over from the original contents.
             _io.File.WriteAllText(_filePath, data.ToString());
         }
     }
