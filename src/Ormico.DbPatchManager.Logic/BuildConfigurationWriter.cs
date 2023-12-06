@@ -1,29 +1,35 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Ormico.DbPatchManager.Common;
 using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ormico.DbPatchManager.Logic
 {
     /// <summary>
-    /// Readn and Write DatabaseBuildConfiguration to storage.
+    /// Read and Write DatabaseBuildConfiguration to storage.
     /// </summary>
     public class BuildConfigurationWriter
     {
-        public BuildConfigurationWriter(string filePath, string localFilePath)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filePath">Path and filename for main settings file.</param>
+        /// <param name="localFilePath">Path and filename for local override settings file.</param>
+        /// <param name="fileSystem">File system object for unit testing.</param>
+        public BuildConfigurationWriter(string filePath, string localFilePath, IFileSystem fileSystem = null)
         {
             _filePath = filePath;
             _localFilePath = localFilePath;
+            _io = fileSystem ?? new FileSystem();
         }
 
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
-        FileSystem _io = new FileSystem();
+        IFileSystem _io;
 
         /// <summary>
         /// Path and name of file to read and write.
@@ -48,8 +54,11 @@ namespace Ormico.DbPatchManager.Logic
             DatabaseBuildConfiguration rc = null;
             if(_io.File.Exists(_filePath))
             {
-                //rc = JsonConvert.DeserializeObject<DatabaseBuildConfiguration>(_io.File.ReadAllText(_filePath), _jsonSettings);
                 var o = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_filePath));
+
+                var schemaVer = DetectSchemaVersion(o);
+                if (schemaVer == SchemaMapper.PatchesSchemaVersionEnum.Unknown)
+                    throw new DbPatchManagerException("Cannot detect patches.json schema version");
 
                 if (_io.File.Exists(_localFilePath))
                 {
@@ -110,11 +119,47 @@ namespace Ormico.DbPatchManager.Logic
             return rc;
         }
 
+        public SchemaMapper.PatchesSchemaVersionEnum DetectSchemaVersion(Newtonsoft.Json.Linq.JObject o)
+        {
+            //todo: write unit tests for this method and SchemaMapper class
+            var mapper = new SchemaMapper();
+            var rc = SchemaMapper.PatchesSchemaVersionEnum.Unknown;
+            var schemaVersionProperty = o.Property("schema");
+
+            if (schemaVersionProperty != null)
+            {
+                if (!string.IsNullOrWhiteSpace((string)schemaVersionProperty.Value))
+                {
+                    string schemaStr = (string)schemaVersionProperty.Value;
+                    rc = mapper.MapSchemaVersion(schemaStr);
+                }
+            }
+            else
+            {
+                // if no schemaVersion property then try to detect if v1 by checking other properties
+                var patchesProperty = o.Property("patches");
+
+                if (patchesProperty != null)
+                {
+                    rc = SchemaMapper.PatchesSchemaVersionEnum.DbPatchV1;
+                }
+            }
+
+            return rc;
+        }
+
+        /// <summary>
+        /// Write DatabaseBuildConfiguration data to file path passed to constructor.
+        /// This method is used for all edits which currently include init and add patch.
+        /// The algorithm currently used writes the entire file each time. The algorithm decides whether to 
+        /// write each property by checking first to see if the property exists in the local file. If it does
+        /// not exist in the local file then the property is written to the main file.
+        /// </summary>
+        /// <param name="buildConfiguration"></param>
         public void Write(DatabaseBuildConfiguration buildConfiguration)
         {
             JObject data;
 
-            //todo: if local file exists, don't write values to patches.json if value exists in patches.local.json
             if (_io.File.Exists(_localFilePath))
             {
                 var localO = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_localFilePath));
@@ -164,7 +209,6 @@ namespace Ormico.DbPatchManager.Logic
             }
             else
             {
-                //string data = JsonConvert.SerializeObject(buildConfiguration, Formatting.Indented, _jsonSettings);
                 data = JObject.FromObject(new
                 {
                     DatabaseType = buildConfiguration.DatabaseType,
@@ -183,6 +227,9 @@ namespace Ormico.DbPatchManager.Logic
                 });
             }
 
+            // write all text creates the file if it doesn't exist
+            // but it also truncates the file before writing if it does exist
+            // so there will be no data left over from the original contents.
             _io.File.WriteAllText(_filePath, data.ToString());
         }
     }
