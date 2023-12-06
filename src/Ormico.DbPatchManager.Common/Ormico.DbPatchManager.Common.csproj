@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <RepositoryUrl>https://github.com/ormico/dbpatchmanager</RepositoryUrl>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <Authors>Zack Moore</Authors>
