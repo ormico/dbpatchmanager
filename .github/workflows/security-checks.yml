@@ -1,0 +1,19 @@
+name: Security Checks
+
+on: 
+  pull_request:
+  schedule:
+    - cron: '10 5 * * 6'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  Scans:
+    name: Scans
+    uses: ncino/security-checks/.github/workflows/security-checks.yml@v4.0.1
+    with:
+      semgrep_run: true
+      trufflehog_run: true
+    secrets: inherit
