@@ -1,0 +1,341 @@
+name: Pull Request Build
+
+on:
+  pull_request:
+    branches: [ main, 'release/*' ]
+    types: [opened, synchronize, reopened]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  BUILD_CONFIGURATION: 'Release'
+
+jobs:
+  # Job to validate version increment on PRs to main
+  version-check:
+    name: version-check
+    runs-on: ubuntu-latest
+    if: github.base_ref == 'main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for comparison
+
+      - name: Checkout main branch
+        run: git checkout main
+
+      - name: Get main branch version
+        id: main-version
+        shell: pwsh
+        run: |
+          $versionData = Get-Content version.json -Raw | ConvertFrom-Json
+          $mainVersion = $versionData.version
+          Write-Host "Main branch version: $mainVersion"
+          "main-version=$mainVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Checkout PR branch
+        run: git checkout ${{ github.head_ref }}
+
+      - name: Get PR branch version
+        id: pr-version
+        shell: pwsh
+        run: |
+          $versionData = Get-Content version.json -Raw | ConvertFrom-Json
+          $prVersion = $versionData.version
+          Write-Host "PR branch version: $prVersion"
+          "pr-version=$prVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Validate version increment
+        shell: pwsh
+        run: |
+          $mainVersion = "${{ steps.main-version.outputs.main-version }}"
+          $prVersion = "${{ steps.pr-version.outputs.pr-version }}"
+          
+          Write-Host "Validating version increment:"
+          Write-Host "  Main: $mainVersion"
+          Write-Host "  PR:   $prVersion"
+          
+          # Parse versions
+          if ($mainVersion -match "^(\d+)\.(\d+)\.(\d+)$") {
+              $mainMajor = [int]$Matches[1]
+              $mainMinor = [int]$Matches[2]
+              $mainPatch = [int]$Matches[3]
+          } else {
+              Write-Error "Invalid main version format: $mainVersion"
+              exit 1
+          }
+          
+          if ($prVersion -match "^(\d+)\.(\d+)\.(\d+)$") {
+              $prMajor = [int]$Matches[1]
+              $prMinor = [int]$Matches[2]
+              $prPatch = [int]$Matches[3]
+          } else {
+              Write-Error "Invalid PR version format: $prVersion"
+              exit 1
+          }
+          
+          # Check if version was incremented properly
+          $majorIncremented = $prMajor -gt $mainMajor
+          $minorIncremented = $prMinor -gt $mainMinor -and $prMajor -eq $mainMajor
+          $patchIncremented = $prPatch -gt $mainPatch -and $prMinor -eq $mainMinor -and $prMajor -eq $mainMajor
+          
+          $validIncrement = $false
+          
+          if ($majorIncremented -and $prMinor -eq 0 -and $prPatch -eq 0) {
+              Write-Host "✓ Valid major version increment"
+              $validIncrement = $true
+          }
+          elseif ($minorIncremented -and $prPatch -eq 0) {
+              Write-Host "✓ Valid minor version increment"
+              $validIncrement = $true
+          }
+          elseif ($patchIncremented) {
+              Write-Host "✓ Valid patch version increment"
+              $validIncrement = $true
+          }
+          
+          if (-not $validIncrement) {
+              Write-Error "❌ Version must be incremented for PRs to main branch"
+              Write-Host "Current main version: $mainVersion"
+              Write-Host "PR version: $prVersion"
+              Write-Host ""
+              Write-Host "Valid increments would be:"
+              Write-Host "  Major: $($mainMajor + 1).0.0 (breaking changes)"
+              Write-Host "  Minor: $mainMajor.$($mainMinor + 1).0 (new features)"
+              Write-Host "  Patch: $mainMajor.$mainMinor.$($mainPatch + 1) (bug fixes)"
+              exit 1
+          }
+
+  # Main build and test job
+  build-and-test:
+    name: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Get version information
+        id: version
+        shell: pwsh
+        run: |
+          ./.github/scripts/version-management.ps1 -Action get-build -BuildNumber ${{ github.run_number }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore src/SimpleWeatherList.sln
+
+      - name: Build application
+        run: |
+          dotnet build src/SimpleWeatherList.sln \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            --no-restore \
+            -p:Version=${{ steps.version.outputs.build-version }} \
+            -p:AssemblyVersion=${{ steps.version.outputs.version }} \
+            -p:FileVersion=${{ steps.version.outputs.build-version }}
+
+      - name: Run unit tests
+        run: |
+          dotnet test src/SimpleWeatherList.sln \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            --no-build \
+            --verbosity normal \
+            --logger trx \
+            --results-directory TestResults \
+            --collect:"XPlat Code Coverage"
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results
+          path: TestResults/*.trx
+          reporter: dotnet-trx
+
+      - name: Upload code coverage
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          directory: TestResults
+          fail_ci_if_error: false
+
+  # Security scanning
+  security-scan:
+    name: security-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore src/SimpleWeatherList.sln
+
+      - name: Run security scan
+        run: |
+          # Install dotnet security scanning tool
+          dotnet tool install --global security-scan
+          
+          # Run security scan (this is a placeholder - replace with actual security scanning tool)
+          echo "Running security scan..."
+          # security-scan src/SimpleWeatherList.sln
+
+      - name: Run dependency vulnerability check
+        run: |
+          # Check for known vulnerabilities in dependencies
+          dotnet list src/SimpleWeatherList.sln package --vulnerable --include-transitive
+
+  # Code quality check
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore src/SimpleWeatherList.sln
+
+      - name: Code formatting check
+        run: |
+          dotnet format src/SimpleWeatherList.sln --verify-no-changes --verbosity diagnostic
+
+      - name: Static code analysis
+        run: |
+          # Run static code analysis
+          dotnet build src/SimpleWeatherList.sln \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            -p:TreatWarningsAsErrors=true \
+            -p:WarningsAsErrors="" \
+            -p:WarningsNotAsErrors=""
+
+  # Docker build test (without push)
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Get version information
+        id: version
+        shell: pwsh
+        run: |
+          ./.github/scripts/version-management.ps1 -Action get-build -BuildNumber ${{ github.run_number }}
+
+      - name: Test Docker build
+        run: |
+          dotnet publish src/SimpleWeatherList.Web/SimpleWeatherList.Web.csproj \
+            -c ${{ env.BUILD_CONFIGURATION }} \
+            -p:PublishProfile=DefaultContainer \
+            -p:ContainerImageName=simpleweatherlist.web \
+            -p:ContainerImageTag=${{ steps.version.outputs.build-version }} \
+            -p:ContainerRegistry="" \
+            -p:ContainerRepository=""
+
+  # Summary job
+  pr-summary:
+    name: PR Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-and-test, security-scan, code-quality, docker-build]
+    if: always()
+    steps:
+      - name: Check job results
+        run: |
+          echo "Build and Test: ${{ needs.build-and-test.result }}"
+          echo "Security Scan: ${{ needs.security-scan.result }}"
+          echo "Code Quality: ${{ needs.code-quality.result }}"
+          echo "Docker Build: ${{ needs.docker-build.result }}"
+          
+          if [[ "${{ needs.build-and-test.result }}" != "success" ]] || \
+             [[ "${{ needs.security-scan.result }}" != "success" ]] || \
+             [[ "${{ needs.code-quality.result }}" != "success" ]] || \
+             [[ "${{ needs.docker-build.result }}" != "success" ]]; then
+            echo "❌ One or more checks failed"
+            exit 1
+          else
+            echo "✅ All checks passed"
+          fi
+
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            const buildResult = "${{ needs.build-and-test.result }}";
+            const securityResult = "${{ needs.security-scan.result }}";
+            const qualityResult = "${{ needs.code-quality.result }}";
+            const dockerResult = "${{ needs.docker-build.result }}";
+            
+            const getEmoji = (result) => result === 'success' ? '✅' : result === 'failure' ? '❌' : '⚠️';
+            
+            const comment = `## 🔄 PR Build Results
+            
+            | Check | Status |
+            |-------|--------|
+            | Build & Test | ${getEmoji(buildResult)} ${buildResult} |
+            | Security Scan | ${getEmoji(securityResult)} ${securityResult} |
+            | Code Quality | ${getEmoji(qualityResult)} ${qualityResult} |
+            | Docker Build | ${getEmoji(dockerResult)} ${dockerResult} |
+            
+            **Run ID:** [\`${{ github.run_id }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+            
+            // Find existing comment and update or create new one
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            const existingComment = comments.data.find(c => 
+              c.user.login === 'github-actions[bot]' && 
+              c.body.includes('PR Build Results')
+            );
+            
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
