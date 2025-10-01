@@ -392,20 +392,33 @@ jobs:
           echo "Package: $NUPKG_FILE"
           echo "Version: $VERSION"
           
-          # This would contain actual NuGet publishing logic
-          # dotnet nuget push "$NUPKG_FILE" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
-          echo "✅ NuGet package publication completed (simulated)"
+          # Publish to NuGet.org
+          dotnet nuget push "$NUPKG_FILE" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+          echo "✅ NuGet package published to nuget.org"
 
       - name: Verify package availability
         run: |
           VERSION="${{ needs.build-release.outputs.full-version }}"
           
-          echo "🔍 Verifying package availability"
+          echo "🔍 Verifying package availability on NuGet.org"
           echo "Package: Ormico.DbPatchManager.Common"
           echo "Version: $VERSION"
           
-          # This would verify the package is available on NuGet
-          echo "✅ Package verification completed"
+          # Wait a moment for the package to be indexed
+          echo "Waiting 30 seconds for package indexing..."
+          sleep 30
+          
+          # Check if package is available (this will retry a few times)
+          for i in {1..5}; do
+            echo "Verification attempt $i/5..."
+            if curl -s "https://api.nuget.org/v3-flatcontainer/ormico.dbpatchmanager.common/$VERSION/ormico.dbpatchmanager.common.nuspec" | grep -q "Ormico.DbPatchManager.Common"; then
+              echo "✅ Package verified as available on NuGet.org"
+              break
+            else
+              echo "Package not yet available, waiting..."
+              sleep 10
+            fi
+          done
 
   # Summary job
   release-summary:

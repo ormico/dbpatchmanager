@@ -13,8 +13,8 @@ on:
         required: false
         default: 'unit'
         type: string
-      image-tag:
-        description: 'Docker image tag to test'
+      cli-package-path:
+        description: 'Path to CLI package to test'
         required: false
         type: string
       deployment-url:
@@ -53,7 +53,7 @@ jobs:
           echo "🧪 Test Configuration"
           echo "Environment: ${{ inputs.test-environment }}"
           echo "Test Types: ${{ inputs.test-types }}"
-          echo "Image Tag: ${{ inputs.image-tag || 'N/A' }}"
+          echo "CLI Package: ${{ inputs.cli-package-path || 'N/A' }}"
           echo "Deployment URL: ${{ inputs.deployment-url || 'N/A' }}"
 
       - name: Restore dependencies

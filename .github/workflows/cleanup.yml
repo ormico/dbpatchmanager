@@ -9,17 +9,12 @@ on:
       cleanup_previews:
         description: 'Cleanup preview releases older than X days'
         required: false
-        default: '7'
+        default: '60'
         type: string
       cleanup_artifacts:
         description: 'Cleanup workflow artifacts older than X days'
         required: false
         default: '30'
-        type: string
-      cleanup_images:
-        description: 'Cleanup container images older than X days'
-        required: false
-        default: '90'
         type: string
       dry_run:
         description: 'Perform dry run (no actual deletions)'
@@ -27,56 +22,53 @@ on:
         default: false
         type: boolean
 
-env:
-  REGISTRY: ghcr.io
-
 jobs:
   cleanup-preview-releases:
     name: Cleanup Preview Releases
     runs-on: ubuntu-latest
     steps:
-      - name: Cleanup preview container images
+      - name: Cleanup preview artifacts
         shell: pwsh
         run: |
-          $daysOld = [int]"${{ inputs.cleanup_previews || '7' }}"
+          $daysOld = [int]"${{ inputs.cleanup_previews || '60' }}"
           $dryRun = "${{ inputs.dry_run }}" -eq "true"
           $cutoffDate = (Get-Date).AddDays(-$daysOld)
           
-          Write-Host "🧹 Cleaning up preview images older than $daysOld days (cutoff: $cutoffDate)"
+          Write-Host "🧹 Cleaning up preview artifacts older than $daysOld days (cutoff: $cutoffDate)"
           if ($dryRun) { Write-Host "DRY RUN MODE - No actual deletions will be performed" }
           
-          # This would use GitHub API or registry API to list and delete old preview images
-          # For now, this is a placeholder
+          # This would clean up old preview build artifacts and releases
+          # For DbPatchManager, this includes preview CLI packages and NuGet packages
           
-          Write-Host "Querying container registry for preview images..."
-          Write-Host "Repository: ${{ github.repository_owner }}/simpleweatherlist.web"
-          Write-Host "Registry: ${{ env.REGISTRY }}"
+          Write-Host "Querying repository for preview artifacts..."
+          Write-Host "Repository: ${{ github.repository }}"
+          Write-Host "Artifact types: CLI packages, NuGet packages, preview releases"
           
           # Example cleanup logic (would need actual API calls)
-          $previewImages = @(
-              @{ tag = "1.0.0-preview-abc123-01"; created = (Get-Date).AddDays(-10) },
-              @{ tag = "1.0.0-preview-def456-02"; created = (Get-Date).AddDays(-5) },
-              @{ tag = "1.0.0-preview-ghi789-01"; created = (Get-Date).AddDays(-2) }
+          $previewArtifacts = @(
+              @{ name = "dbpatch-manager-cli-1.0.0-preview-abc123.zip"; created = (Get-Date).AddDays(-10) },
+              @{ name = "dbpatch-manager-cli-1.0.0-preview-def456.zip"; created = (Get-Date).AddDays(-5) },
+              @{ name = "dbpatch-manager-cli-1.0.0-preview-ghi789.zip"; created = (Get-Date).AddDays(-2) }
           )
           
-          $imagesToDelete = $previewImages | Where-Object { $_.created -lt $cutoffDate -and $_.tag -like "*preview*" }
+          $artifactsToDelete = $previewArtifacts | Where-Object { $_.created -lt $cutoffDate -and $_.name -like "*preview*" }
           
-          if ($imagesToDelete.Count -eq 0) {
-              Write-Host "✅ No preview images found that need cleanup"
+          if ($artifactsToDelete.Count -eq 0) {
+              Write-Host "✅ No preview artifacts found that need cleanup"
           } else {
-              Write-Host "Found $($imagesToDelete.Count) preview images to cleanup:"
-              foreach ($image in $imagesToDelete) {
-                  Write-Host "  - $($image.tag) (created: $($image.created))"
+              Write-Host "Found $($artifactsToDelete.Count) preview artifacts to cleanup:"
+              foreach ($artifact in $artifactsToDelete) {
+                  Write-Host "  - $($artifact.name) (created: $($artifact.created))"
                   if (-not $dryRun) {
-                      Write-Host "    [Would delete image here]"
-                      # gh api --method DELETE /user/packages/container/simpleweatherlist.web/versions/$version_id
+                      Write-Host "    [Would delete artifact here]"
+                      # Use GitHub API to delete old workflow artifacts and releases
                   }
               }
               
               if ($dryRun) {
-                  Write-Host "DRY RUN: $($imagesToDelete.Count) images would be deleted"
+                  Write-Host "DRY RUN: $($artifactsToDelete.Count) artifacts would be deleted"
               } else {
-                  Write-Host "✅ Cleaned up $($imagesToDelete.Count) preview images"
+                  Write-Host "✅ Cleaned up $($artifactsToDelete.Count) preview artifacts"
               }
           }
 
@@ -152,60 +144,6 @@ jobs:
               console.error(`❌ Error during cleanup: ${error.message}`);
               throw error;
             }
-
-  cleanup-container-images:
-    name: Cleanup Old Container Images
-    runs-on: ubuntu-latest
-    steps:
-      - name: Cleanup old container images
-        shell: pwsh
-        run: |
-          $daysOld = [int]"${{ inputs.cleanup_images || '90' }}"
-          $dryRun = "${{ inputs.dry_run }}" -eq "true"
-          $cutoffDate = (Get-Date).AddDays(-$daysOld)
-          
-          Write-Host "🧹 Cleaning up container images older than $daysOld days (cutoff: $cutoffDate)"
-          if ($dryRun) { Write-Host "DRY RUN MODE - No actual deletions will be performed" }
-          
-          Write-Host "Repository: ${{ github.repository_owner }}/simpleweatherlist.web"
-          Write-Host "Registry: ${{ env.REGISTRY }}"
-          
-          # This would use GitHub Packages API to manage container images
-          # For now, this is a placeholder showing the approach
-          
-          # Example: Query for old non-latest, non-release images
-          $allImages = @(
-              @{ tag = "1.0.0.100"; created = (Get-Date).AddDays(-100); type = "release" },
-              @{ tag = "1.0.1.101"; created = (Get-Date).AddDays(-50); type = "release" },
-              @{ tag = "1.0.2.102"; created = (Get-Date).AddDays(-10); type = "release" },
-              @{ tag = "latest"; created = (Get-Date).AddDays(-1); type = "latest" },
-              @{ tag = "v1.0.0.100"; created = (Get-Date).AddDays(-100); type = "release-tag" }
-          )
-          
-          # Don't delete latest or recent releases
-          $imagesToDelete = $allImages | Where-Object { 
-              $_.created -lt $cutoffDate -and 
-              $_.type -ne "latest" -and 
-              $_.tag -notlike "*preview*"  # Preview images handled separately
-          }
-          
-          if ($imagesToDelete.Count -eq 0) {
-              Write-Host "✅ No old container images found that need cleanup"
-          } else {
-              Write-Host "Found $($imagesToDelete.Count) old images to cleanup:"
-              foreach ($image in $imagesToDelete) {
-                  Write-Host "  - $($image.tag) (created: $($image.created), type: $($image.type))"
-                  if (-not $dryRun) {
-                      Write-Host "    [Would delete image here via GitHub Packages API]"
-                  }
-              }
-              
-              if ($dryRun) {
-                  Write-Host "DRY RUN: $($imagesToDelete.Count) images would be deleted"
-              } else {
-                  Write-Host "✅ Cleaned up $($imagesToDelete.Count) old container images"
-              }
-          }
 
   cleanup-old-branches:
     name: Cleanup Merged Feature Branches
@@ -283,7 +221,7 @@ jobs:
   cleanup-summary:
     name: Cleanup Summary
     runs-on: ubuntu-latest
-    needs: [cleanup-preview-releases, cleanup-workflow-artifacts, cleanup-container-images, cleanup-old-branches]
+    needs: [cleanup-preview-releases, cleanup-workflow-artifacts, cleanup-old-branches]
     if: always()
     steps:
       - name: Generate cleanup summary
@@ -294,7 +232,6 @@ jobs:
             
             const previewResult = "${{ needs.cleanup-preview-releases.result }}";
             const artifactsResult = "${{ needs.cleanup-workflow-artifacts.result }}";
-            const imagesResult = "${{ needs.cleanup-container-images.result }}";
             const branchesResult = "${{ needs.cleanup-old-branches.result }}";
             const dryRun = "${{ inputs.dry_run }}" === "true";
             
@@ -315,13 +252,11 @@ jobs:
             summary += `|------|--------|\n`;
             summary += `| Preview Releases | ${getEmoji(previewResult)} ${previewResult} |\n`;
             summary += `| Workflow Artifacts | ${getEmoji(artifactsResult)} ${artifactsResult} |\n`;
-            summary += `| Container Images | ${getEmoji(imagesResult)} ${imagesResult} |\n`;
             summary += `| Merged Branches | ${getEmoji(branchesResult)} ${branchesResult} |\n`;
             
             summary += `\n## Configuration\n\n`;
-            summary += `- **Preview releases older than:** ${{ inputs.cleanup_previews || '7' }} days\n`;
+            summary += `- **Preview releases older than:** ${{ inputs.cleanup_previews || '60' }} days\n`;
             summary += `- **Workflow artifacts older than:** ${{ inputs.cleanup_artifacts || '30' }} days\n`;
-            summary += `- **Container images older than:** ${{ inputs.cleanup_images || '90' }} days\n`;
             summary += `- **Merged branches older than:** 30 days\n`;
             
             summary += `\n**Workflow Run:** [\`${{ github.run_id }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
