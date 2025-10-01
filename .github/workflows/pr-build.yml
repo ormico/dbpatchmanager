@@ -5,6 +5,11 @@ on:
     branches: [ main, 'release/*' ]
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: write
+  pull-requests: write
+  checks: write
+
 env:
   DOTNET_VERSION: '8.0.x'
   BUILD_CONFIGURATION: 'Release'
@@ -289,47 +294,54 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore src/Ormico.DbPatchManager.sln
 
-      - name: Check code formatting
+      - name: Check and auto-fix code formatting
+        id: format-fix
         run: |
-          echo "🔍 Checking code formatting..."
-          dotnet format src/Ormico.DbPatchManager.sln --verify-no-changes --verbosity diagnostic || echo "Formatting issues detected"
-
-      - name: Report formatting issues (if any)
-        id: format-check
-        run: |
-          echo "🔧 Checking for formatting issues..."
+          echo "� Checking and fixing code formatting..."
           
-          # Run format without --verify-no-changes to see what would change
+          # Apply formatting fixes
           dotnet format src/Ormico.DbPatchManager.sln --verbosity diagnostic
           
           # Check if any files were changed by the format command
           if git diff --quiet; then
             echo "No formatting changes needed"
-            echo "has-issues=false" >> $GITHUB_OUTPUT
+            echo "has-changes=false" >> $GITHUB_OUTPUT
           else
-            echo "Formatting issues found"
-            echo "has-issues=true" >> $GITHUB_OUTPUT
+            echo "Formatting changes applied"
+            echo "has-changes=true" >> $GITHUB_OUTPUT
             
-            # Reset the changes since we're just checking
-            git checkout -- .
+            # Show what files were changed
+            echo "Files changed:"
+            git diff --name-only
           fi
 
-      - name: Create formatting issues PR comment
-        if: steps.format-check.outputs.has-issues == 'true'
+      - name: Commit formatting changes
+        if: steps.format-fix.outputs.has-changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "Auto-fix code formatting [skip ci]"
+          git push
+
+      - name: Create formatting fix PR comment
+        if: steps.format-fix.outputs.has-changes == 'true'
         uses: actions/github-script@v6
         with:
           script: |
-            const comment = `## 🔧 Code Formatting Issues Found
+            const comment = `## 🔧 Code Formatting Auto-Fixed
             
-            This PR has code formatting issues that need to be fixed.
+            This PR had code formatting issues that have been automatically fixed and committed.
             
-            **To fix locally, run:**
+            The following files were updated:
+            - Applied EditorConfig formatting rules
+            - Fixed indentation and whitespace
+            - Organized using statements
+            
+            The changes have been pushed to this PR branch. Please pull the latest changes if you're working locally:
             \`\`\`bash
-            dotnet format src/Ormico.DbPatchManager.sln
+            git pull origin ${{ github.head_ref }}
             \`\`\`
-            
-            This will automatically format your code according to the project's EditorConfig settings.
-            After running the command, commit and push the changes to update this PR.
             `;
             
             await github.rest.issues.createComment({
@@ -338,12 +350,6 @@ jobs:
               issue_number: context.issue.number,
               body: comment
             });
-
-      - name: Fail if formatting issues exist
-        if: steps.format-check.outputs.has-issues == 'true'
-        run: |
-          echo "❌ Code formatting issues found. Please run 'dotnet format src/Ormico.DbPatchManager.sln' locally and commit the changes."
-          exit 1
 
       - name: Static code analysis
         run: |
