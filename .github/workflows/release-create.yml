@@ -77,8 +77,13 @@ jobs:
           ./.github/scripts/version-management.ps1 -Action get-build -BuildNumber ${{ github.run_number }}
           
           # Create release tag
-          $versionData = Get-Content version.json -Raw | ConvertFrom-Json
-          $releaseTag = "v$($versionData.version).${{ github.run_number }}"
+          if (Test-Path "version.json") {
+              $versionData = Get-Content version.json -Raw | ConvertFrom-Json
+              $releaseTag = "v$($versionData.version).${{ github.run_number }}"
+          } else {
+              Write-Warning "version.json not found after version management script. Using default version 0.1.0"
+              $releaseTag = "v0.1.0.${{ github.run_number }}"
+          }
           Write-Host "Release tag: $releaseTag"
           "release-tag=$releaseTag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 

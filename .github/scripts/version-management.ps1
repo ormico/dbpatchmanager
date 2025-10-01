@@ -25,8 +25,21 @@ function Get-VersionFromFile {
     param([string]$FilePath)
     
     if (-not (Test-Path $FilePath)) {
-        Write-Error "Version file not found: $FilePath"
-        exit 1
+        Write-Warning "Version file not found: $FilePath. Creating default version file."
+        
+        # Create default version data
+        $defaultVersionData = @{
+            version = "0.0.0"
+            build = 0
+            prerelease = ""
+            metadata = ""
+            updated = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            updatedBy = "github-actions"
+        }
+        
+        # Create the version file with defaults
+        Set-VersionToFile -FilePath $FilePath -VersionData $defaultVersionData
+        return $defaultVersionData
     }
     
     try {
@@ -75,6 +88,31 @@ function Parse-SemanticVersion {
     else {
         Write-Error "Invalid semantic version format: $VersionString"
         exit 1
+    }
+}
+
+# Function to safely get version information with defaults
+function Get-SafeVersionInfo {
+    param([string]$FilePath = "version.json")
+    
+    if (Test-Path $FilePath) {
+        try {
+            $versionData = Get-Content $FilePath -Raw | ConvertFrom-Json
+            return $versionData
+        }
+        catch {
+            Write-Warning "Failed to parse existing version file. Using defaults."
+        }
+    }
+    
+    # Return default version structure
+    return @{
+        version = "0.1.0"
+        build = 0
+        prerelease = ""
+        metadata = ""
+        updated = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        updatedBy = $env:GITHUB_ACTOR ?? $env:USERNAME ?? "github-actions"
     }
 }
 

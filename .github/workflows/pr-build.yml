@@ -28,8 +28,13 @@ jobs:
         id: main-version
         shell: pwsh
         run: |
-          $versionData = Get-Content version.json -Raw | ConvertFrom-Json
-          $mainVersion = $versionData.version
+          if (Test-Path "version.json") {
+              $versionData = Get-Content version.json -Raw | ConvertFrom-Json
+              $mainVersion = $versionData.version
+          } else {
+              Write-Warning "version.json not found on main branch. Using default version 0.0.0"
+              $mainVersion = "0.0.0"
+          }
           Write-Host "Main branch version: $mainVersion"
           "main-version=$mainVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
@@ -40,8 +45,13 @@ jobs:
         id: pr-version
         shell: pwsh
         run: |
-          $versionData = Get-Content version.json -Raw | ConvertFrom-Json
-          $prVersion = $versionData.version
+          if (Test-Path "version.json") {
+              $versionData = Get-Content version.json -Raw | ConvertFrom-Json
+              $prVersion = $versionData.version
+          } else {
+              Write-Warning "version.json not found on PR branch. Using default version 0.0.0"
+              $prVersion = "0.0.0"
+          }
           Write-Host "PR branch version: $prVersion"
           "pr-version=$prVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
@@ -55,7 +65,27 @@ jobs:
           Write-Host "  Main: $mainVersion"
           Write-Host "  PR:   $prVersion"
           
-          # Parse versions
+          # Special case: If main branch has no version file (0.0.0) and PR introduces a valid version
+          if ($mainVersion -eq "0.0.0" -and $prVersion -ne "0.0.0") {
+              if ($prVersion -match "^(\d+)\.(\d+)\.(\d+)$") {
+                  Write-Host "✓ Valid initial version setup: $prVersion"
+                  Write-Host "Main branch has no version file, PR introduces version $prVersion"
+                  exit 0
+              } else {
+                  Write-Error "❌ Invalid version format: $prVersion"
+                  Write-Host "Version must follow semantic versioning (e.g., 1.0.0, 0.1.0, 0.0.1)"
+                  exit 1
+              }
+          }
+          
+          # Both versions are 0.0.0 - invalid state
+          if ($mainVersion -eq "0.0.0" -and $prVersion -eq "0.0.0") {
+              Write-Error "❌ PR must include a valid version.json file"
+              Write-Host "Please create a version.json file with an initial version (e.g., 0.1.0, 1.0.0)"
+              exit 1
+          }
+          
+          # Parse versions for normal increment validation
           if ($mainVersion -match "^(\d+)\.(\d+)\.(\d+)$") {
               $mainMajor = [int]$Matches[1]
               $mainMinor = [int]$Matches[2]
