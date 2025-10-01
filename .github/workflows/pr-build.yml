@@ -292,49 +292,44 @@ jobs:
       - name: Check code formatting
         run: |
           echo "🔍 Checking code formatting..."
-          dotnet format src/Ormico.DbPatchManager.sln --verify-no-changes --verbosity diagnostic
+          dotnet format src/Ormico.DbPatchManager.sln --verify-no-changes --verbosity diagnostic || echo "Formatting issues detected"
 
-      - name: Auto-fix formatting issues (if any)
-        id: format-fix
+      - name: Report formatting issues (if any)
+        id: format-check
         run: |
-          echo "🔧 Auto-fixing formatting issues..."
+          echo "🔧 Checking for formatting issues..."
+          
+          # Run format without --verify-no-changes to see what would change
           dotnet format src/Ormico.DbPatchManager.sln --verbosity diagnostic
           
-          # Check if any files were changed
+          # Check if any files were changed by the format command
           if git diff --quiet; then
             echo "No formatting changes needed"
-            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "has-issues=false" >> $GITHUB_OUTPUT
           else
-            echo "Formatting changes were made"
-            echo "changes=true" >> $GITHUB_OUTPUT
-            git diff --name-only
-            echo "::warning::Code formatting issues found and auto-fixed. Please review the changes."
+            echo "Formatting issues found"
+            echo "has-issues=true" >> $GITHUB_OUTPUT
+            
+            # Reset the changes since we're just checking
+            git checkout -- .
           fi
 
-      - name: Create formatting fix PR comment
-        if: steps.format-fix.outputs.changes == 'true'
+      - name: Create formatting issues PR comment
+        if: steps.format-check.outputs.has-issues == 'true'
         uses: actions/github-script@v6
         with:
           script: |
-            const diff = await exec.getExecOutput('git', ['diff'], { cwd: process.cwd() });
-            
             const comment = `## 🔧 Code Formatting Issues Found
             
-            The following formatting issues were found and can be auto-fixed:
-            
-            <details>
-            <summary>Click to see formatting diff</summary>
-            
-            \`\`\`diff
-            ${diff.stdout}
-            \`\`\`
-            
-            </details>
+            This PR has code formatting issues that need to be fixed.
             
             **To fix locally, run:**
             \`\`\`bash
             dotnet format src/Ormico.DbPatchManager.sln
             \`\`\`
+            
+            This will automatically format your code according to the project's EditorConfig settings.
+            After running the command, commit and push the changes to update this PR.
             `;
             
             await github.rest.issues.createComment({
@@ -343,6 +338,12 @@ jobs:
               issue_number: context.issue.number,
               body: comment
             });
+
+      - name: Fail if formatting issues exist
+        if: steps.format-check.outputs.has-issues == 'true'
+        run: |
+          echo "❌ Code formatting issues found. Please run 'dotnet format src/Ormico.DbPatchManager.sln' locally and commit the changes."
+          exit 1
 
       - name: Static code analysis
         run: |
