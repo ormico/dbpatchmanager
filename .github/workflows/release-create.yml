@@ -117,12 +117,14 @@ jobs:
             --results-directory TestResults
 
       - name: Publish test results
-        uses: dorny/test-reporter@v1
+        uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          name: Release Build Test Results
-          path: TestResults/*.trx
-          reporter: dotnet-trx
+          files: |
+            TestResults/**/*.trx
+          check_name: "Release Build Test Results"
+          comment_title: "Release Build Unit Test Results"
+          fail_on: "test failures"
 
       - name: Create CLI artifact package
         shell: pwsh

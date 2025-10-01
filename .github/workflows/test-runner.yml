@@ -127,13 +127,14 @@ jobs:
           echo "✅ Smoke tests completed"
 
       - name: Publish test results
-        uses: dorny/test-reporter@v1
+        uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          name: Test Results (${{ inputs.test-environment }})
-          path: TestResults/**/*.trx
-          reporter: dotnet-trx
-          fail-on-error: false
+          files: |
+            TestResults/**/*.trx
+          check_name: "Test Results (${{ inputs.test-environment }})"
+          comment_title: "Unit Test Results - ${{ inputs.test-environment }}"
+          fail_on: "nothing"
 
       - name: Upload test results
         uses: actions/upload-artifact@v3
