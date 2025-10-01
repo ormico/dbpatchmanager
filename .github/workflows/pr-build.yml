@@ -145,7 +145,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -186,12 +186,14 @@ jobs:
             --collect:"XPlat Code Coverage"
 
       - name: Publish test results
-        uses: dorny/test-reporter@v1
+        uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          name: Test Results
-          path: TestResults/*.trx
-          reporter: dotnet-trx
+          files: |
+            TestResults/**/*.trx
+          check_name: "Test Results"
+          comment_title: "Unit Test Results"
+          fail_on: "test failures"
 
       - name: Upload code coverage
         uses: codecov/codecov-action@v3
@@ -247,7 +249,7 @@ jobs:
           queries: security-and-quality
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -280,7 +282,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
