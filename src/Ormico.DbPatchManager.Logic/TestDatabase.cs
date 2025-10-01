@@ -68,7 +68,7 @@ namespace Ormico.DbPatchManager.Logic
 
         void Load()
         {
-            if(_io.File.Exists(_fileName))
+            if (_io.File.Exists(_fileName))
             {
                 _testDb = JsonConvert.DeserializeObject<TestDb>(_io.File.ReadAllText(_fileName));
             }

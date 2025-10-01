@@ -43,7 +43,7 @@ namespace Ormico.DbPatchManager.Logic
         readonly string _configFileName;
         readonly string _configLocalFileName;
         readonly Random _rand;
-        
+
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
@@ -75,7 +75,7 @@ namespace Ormico.DbPatchManager.Logic
 
         public void AddPatch(string patchName, PatchOptions Options = null)
         {
-            if(string.IsNullOrWhiteSpace(patchName))
+            if (string.IsNullOrWhiteSpace(patchName))
             {
                 throw new ApplicationException("Patch Name required");
             }
@@ -96,7 +96,7 @@ namespace Ormico.DbPatchManager.Logic
 
                 string patchPath = _io.Path.Combine(cfg.PatchFolder, finalId);
 
-                if(!_io.Directory.Exists(patchPath))
+                if (!_io.Directory.Exists(patchPath))
                 {
                     _io.Directory.CreateDirectory(patchPath);
 
@@ -126,7 +126,7 @@ namespace Ormico.DbPatchManager.Logic
             List<string> codeFileNames = GetSortedCodeFileNames(_configuration, dbopt);
 
             var first = _configuration.GetFirstPatch();
-            if(first != null)
+            if (first != null)
             {
                 PluginManager pm = new PluginManager();
 
@@ -160,14 +160,14 @@ namespace Ormico.DbPatchManager.Logic
         private List<string> GetSortedCodeFileNames(DatabaseBuildConfiguration cfg, DatabaseOptions dbopt)
         {
             List<string> rc = new List<string>();
-            
+
             //todo: exclude if starts with "!" or add a glob library that includes this option
 
             // loop through each file name or pattern in CodeFiles, adding to rc in order
             // only add files once
             foreach (var p in cfg.CodeFiles)
             {
-                var currentFiles = _io.Directory.GetFiles(cfg.CodeFolder, p, 
+                var currentFiles = _io.Directory.GetFiles(cfg.CodeFolder, p,
                     System.IO.SearchOption.TopDirectoryOnly);
                 var filteredList = from f in currentFiles
                                    where !rc.Contains(f)
@@ -200,20 +200,20 @@ namespace Ormico.DbPatchManager.Logic
                     foreach (Patch dependency in current.DependsOn)
                     {
                         var isDepInstalled = installedPatches.Any(i => string.Equals(i.PatchId, dependency.Id));
-                        if(!isDepInstalled)
+                        if (!isDepInstalled)
                         {
                             notInstalledDependencies.Add(dependency);
                         }
                     }
                 }
 
-                if(notInstalledDependencies.Any())
+                if (notInstalledDependencies.Any())
                 {
                     // if there are dependencies to install
                     // put current back on stack and put dependencies on stack
                     // and return to top of loop
                     graph.AddFirst(current);
-                    foreach(var d in notInstalledDependencies)
+                    foreach (var d in notInstalledDependencies)
                     {
                         graph.AddFirst(d);
                     }

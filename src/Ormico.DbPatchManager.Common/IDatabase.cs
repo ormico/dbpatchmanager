@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Ormico.DbPatchManager.Common
 {
-    public interface IDatabase: IDisposable
+    public interface IDatabase : IDisposable
     {
         void Connect(DatabaseOptions Options);
 

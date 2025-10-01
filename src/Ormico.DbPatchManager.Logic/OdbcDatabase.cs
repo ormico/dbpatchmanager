@@ -15,7 +15,7 @@ namespace Ormico.DbPatchManager.Logic
         {
             _option = Options;
 
-            if(Options.AddInstalledPatchSql == null ||
+            if (Options.AddInstalledPatchSql == null ||
                 Options.GetInstalledPatchesSql == null ||
                 Options.InitPatchTableSql == null)
             {
@@ -31,7 +31,7 @@ namespace Ormico.DbPatchManager.Logic
 
         public void Dispose()
         {
-            if(_con != null)
+            if (_con != null)
             {
                 _con.Dispose();
             }
