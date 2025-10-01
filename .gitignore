@@ -13,3 +13,6 @@ bin
 obj
 
 src/Ormico.DbPatchManager.CLI/deb/
+
+# Session notes and work-in-progress documentation
+where-did-i-leave-off.md
