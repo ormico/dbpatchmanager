@@ -292,7 +292,7 @@ jobs:
       - name: Check code formatting
         run: |
           echo "🔍 Checking code formatting..."
-          dotnet format src/Ormico.DbPatchManager.sln --dry-run --verbosity diagnostic
+          dotnet format src/Ormico.DbPatchManager.sln --verify-no-changes --verbosity diagnostic
 
       - name: Auto-fix formatting issues (if any)
         id: format-fix
