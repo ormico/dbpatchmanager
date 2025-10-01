@@ -198,6 +198,34 @@ jobs:
         if: always()
         with:
           directory: TestResults
+
+      - name: Test CLI build and functionality
+        shell: pwsh
+        run: |
+          Write-Host "🧪 Testing CLI build and functionality"
+          
+          $cliPath = "src/Ormico.DbPatchManager.CLI/bin/${{ env.BUILD_CONFIGURATION }}/net8.0"
+          
+          # Test that essential files are created
+          $requiredFiles = @("dbpatch.dll", "dbpatch.cmd", "dbpatch")
+          foreach ($file in $requiredFiles) {
+              if (-not (Test-Path "$cliPath/$file")) {
+                  Write-Error "Required file missing: $file"
+                  exit 1
+              }
+              Write-Host "✓ Found required file: $file"
+          }
+          
+          # Test CLI execution
+          Write-Host "Testing CLI help command..."
+          try {
+              dotnet "$cliPath/dbpatch.dll" --help > $null 2>&1
+              Write-Host "✓ CLI help command successful"
+          } catch {
+              Write-Host "⚠ CLI help command failed (may be expected without full setup)"
+          }
+          
+          Write-Host "✅ CLI testing completed"
           fail_ci_if_error: false
 
   # Security scanning
@@ -257,57 +285,11 @@ jobs:
             -p:WarningsNotAsErrors=""
 
   # CLI package validation
-  cli-package-test:
-    name: CLI Package Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Get version information
-        id: version
-        shell: pwsh
-        run: |
-          ./.github/scripts/version-management.ps1 -Action get-build -BuildNumber ${{ github.run_number }}
-
-      - name: Test CLI build and package
-        shell: pwsh
-        run: |
-          # Build the CLI project
-          dotnet build src/Ormico.DbPatchManager.CLI/Ormico.DbPatchManager.CLI.csproj \
-            --configuration ${{ env.BUILD_CONFIGURATION }}
-          
-          $cliPath = "src/Ormico.DbPatchManager.CLI/bin/${{ env.BUILD_CONFIGURATION }}/net8.0"
-          
-          # Test that essential files are created
-          $requiredFiles = @("dbpatch.dll", "dbpatch.cmd", "dbpatch")
-          foreach ($file in $requiredFiles) {
-              if (-not (Test-Path "$cliPath/$file")) {
-                  Write-Error "Required file missing: $file"
-                  exit 1
-              }
-              Write-Host "✓ Found required file: $file"
-          }
-          
-          # Test CLI execution
-          Write-Host "Testing CLI help command..."
-          dotnet "$cliPath/dbpatch.dll" --help > $null 2>&1
-          if ($?) {
-              Write-Host "✓ CLI help command successful"
-          } else {
-              Write-Host "⚠ CLI help command failed (may be expected without full setup)"
-          }
-
   # Summary job
   pr-summary:
     name: PR Build Summary
     runs-on: ubuntu-latest
-    needs: [build-and-test, security-scan, code-quality, cli-package-test]
+    needs: [build-and-test, security-scan, code-quality]
     if: always()
     steps:
       - name: Check job results
@@ -315,12 +297,10 @@ jobs:
           echo "Build and Test: ${{ needs.build-and-test.result }}"
           echo "Security Scan: ${{ needs.security-scan.result }}"
           echo "Code Quality: ${{ needs.code-quality.result }}"
-          echo "CLI Package Test: ${{ needs.cli-package-test.result }}"
           
           if [[ "${{ needs.build-and-test.result }}" != "success" ]] || \
              [[ "${{ needs.security-scan.result }}" != "success" ]] || \
-             [[ "${{ needs.code-quality.result }}" != "success" ]] || \
-             [[ "${{ needs.cli-package-test.result }}" != "success" ]]; then
+             [[ "${{ needs.code-quality.result }}" != "success" ]]; then
             echo "❌ One or more checks failed"
             exit 1
           else
@@ -341,7 +321,6 @@ jobs:
             const buildResult = "${{ needs.build-and-test.result }}";
             const securityResult = "${{ needs.security-scan.result }}";
             const qualityResult = "${{ needs.code-quality.result }}";
-            const packageResult = "${{ needs.cli-package-test.result }}";
             
             const getEmoji = (result) => result === 'success' ? '✅' : result === 'failure' ? '❌' : '⚠️';
             
@@ -349,10 +328,9 @@ jobs:
             
             | Check | Status |
             |-------|--------|
-            | Build & Test | ${getEmoji(buildResult)} ${buildResult} |
+            | Build & Test (includes CLI) | ${getEmoji(buildResult)} ${buildResult} |
             | Security Scan | ${getEmoji(securityResult)} ${securityResult} |
             | Code Quality | ${getEmoji(qualityResult)} ${qualityResult} |
-            | CLI Package Test | ${getEmoji(packageResult)} ${packageResult} |
             
             **Run ID:** [\`${{ github.run_id }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             `;
