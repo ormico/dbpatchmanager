@@ -218,11 +218,13 @@ jobs:
           
           # Test CLI execution
           Write-Host "Testing CLI help command..."
-          try {
-              dotnet "$cliPath/dbpatch.dll" --help > $null 2>&1
+          $helpResult = dotnet "$cliPath/dbpatch.dll" --help 2>&1
+          if ($LASTEXITCODE -eq 0) {
               Write-Host "✓ CLI help command successful"
-          } catch {
-              Write-Host "⚠ CLI help command failed (may be expected without full setup)"
+          } else {
+              Write-Host "⚠ CLI help command failed (exit code: $LASTEXITCODE)"
+              Write-Host "This may be expected if the CLI requires specific setup or configuration"
+              # Don't fail the build for CLI help command issues
           }
           
           Write-Host "✅ CLI testing completed"
