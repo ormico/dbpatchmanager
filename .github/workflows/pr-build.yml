@@ -226,7 +226,6 @@ jobs:
           }
           
           Write-Host "✅ CLI testing completed"
-          fail_ci_if_error: false
 
   # Security scanning
   security-scan:
