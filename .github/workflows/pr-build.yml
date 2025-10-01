@@ -285,6 +285,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -322,7 +325,7 @@ jobs:
           git config --local user.name "GitHub Action"
           git add .
           git commit -m "Auto-fix code formatting [skip ci]"
-          git push
+          git push origin HEAD:${{ github.head_ref }}
 
       - name: Create formatting fix PR comment
         if: steps.format-fix.outputs.has-changes == 'true'
