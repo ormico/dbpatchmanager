@@ -138,18 +138,18 @@ jobs:
           Get-Content "version.json"
       
       - name: Restore dependencies
-        run: dotnet restore src/SimpleWeatherList.sln
+        run: dotnet restore src/Ormico.DbPatchManager.sln
       
       - name: Build solution
         run: |
-          dotnet build src/SimpleWeatherList.sln \
+          dotnet build src/Ormico.DbPatchManager.sln \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
             --no-restore \
             --verbosity minimal
       
       - name: Run tests
         run: |
-          dotnet test src/SimpleWeatherList.sln \
+          dotnet test src/Ormico.DbPatchManager.sln \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
             --no-build \
             --verbosity minimal \
@@ -163,47 +163,69 @@ jobs:
           name: hotfix-test-results
           path: TestResults/
       
-      - name: Build Docker image
+      - name: Create CLI artifact package
+        shell: pwsh
         run: |
-          HOTFIX_VERSION="${{ needs.validate-hotfix.outputs.hotfix-version }}"
-          BUILD_NUMBER="${{ github.run_number }}"
-          FULL_VERSION="$HOTFIX_VERSION.$BUILD_NUMBER"
+          $hotfixVersion = "${{ needs.validate-hotfix.outputs.hotfix-version }}"
+          $buildNumber = "${{ github.run_number }}"
+          $fullVersion = "$hotfixVersion.$buildNumber"
+          $artifactName = "dbpatch-manager-cli-$fullVersion"
+          $cliPath = "src/Ormico.DbPatchManager.CLI/bin/${{ env.BUILD_CONFIGURATION }}/net8.0"
           
-          docker build \
-            --file src/SimpleWeatherList.Web/Dockerfile \
-            --tag simple-weather-list:$FULL_VERSION \
-            --tag simple-weather-list:hotfix-latest \
-            src/
-      
-      - name: Create deployment artifacts
-        run: |
-          HOTFIX_VERSION="${{ needs.validate-hotfix.outputs.hotfix-version }}"
-          BUILD_NUMBER="${{ github.run_number }}"
-          FULL_VERSION="$HOTFIX_VERSION.$BUILD_NUMBER"
+          # Create artifact directory
+          New-Item -ItemType Directory -Path "artifacts" -Force
           
-          # Publish application
-          dotnet publish src/SimpleWeatherList.Web/SimpleWeatherList.Web.csproj \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --output publish/ \
-            --no-build
+          # Copy CLI files to staging
+          $stagingPath = "artifacts/staging"
+          New-Item -ItemType Directory -Path $stagingPath -Force
           
-          # Create deployment package
-          mkdir -p artifacts
-          tar -czf artifacts/hotfix-$FULL_VERSION.tar.gz -C publish/ .
+          # Copy all CLI output files
+          Copy-Item -Path "$cliPath/*" -Destination $stagingPath -Recurse -Force
+          
+          # Ensure script files have correct line endings and permissions
+          if (Test-Path "$stagingPath/dbpatch") {
+              # Convert to Unix line endings for the shell script
+              $content = Get-Content "$stagingPath/dbpatch" -Raw
+              $content = $content -replace "`r`n", "`n"
+              Set-Content "$stagingPath/dbpatch" -Value $content -NoNewline
+          }
+          
+          # Create zip archive
+          Compress-Archive -Path "$stagingPath/*" -DestinationPath "artifacts/$artifactName.zip" -Force
+          
+          Write-Host "Created CLI artifact: artifacts/$artifactName.zip"
           
           # Create version info
-          echo "VERSION=$FULL_VERSION" > artifacts/version.env
-          echo "HOTFIX_VERSION=$HOTFIX_VERSION" >> artifacts/version.env
-          echo "BUILD_NUMBER=$BUILD_NUMBER" >> artifacts/version.env
-          echo "COMMIT_SHA=${{ github.sha }}" >> artifacts/version.env
-      
+          @"
+          VERSION=$fullVersion
+          HOTFIX_VERSION=$hotfixVersion
+          BUILD_NUMBER=$buildNumber
+          COMMIT_SHA=${{ github.sha }}
+          "@ | Out-File -FilePath "artifacts/version.env" -Encoding ascii
+
+      - name: Create NuGet package
+        run: |
+          HOTFIX_VERSION="${{ needs.validate-hotfix.outputs.hotfix-version }}"
+          BUILD_NUMBER="${{ github.run_number }}"
+          FULL_VERSION="$HOTFIX_VERSION.$BUILD_NUMBER"
+          
+          echo "Creating NuGet package with version: $FULL_VERSION"
+          
+          dotnet pack src/Ormico.DbPatchManager.Common/Ormico.DbPatchManager.Common.csproj \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            --no-build \
+            -p:Version=$FULL_VERSION \
+            -p:PackageVersion=$FULL_VERSION \
+            --output artifacts/
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: hotfix-build-${{ needs.validate-hotfix.outputs.hotfix-version }}
           path: |
-            artifacts/
-            publish/
+            artifacts/*.zip
+            artifacts/*.nupkg
+            artifacts/version.env
 
   security-scan:
     name: Security Scan
@@ -221,15 +243,14 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
       
       - name: Restore dependencies
-        run: dotnet restore src/SimpleWeatherList.sln
+        run: dotnet restore src/Ormico.DbPatchManager.sln
       
       - name: Run security scan
         run: |
-          # Install security scanning tool
-          dotnet tool install --global security-scan || true
+          echo "Running security scan for DbPatchManager hotfix..."
           
           # Run vulnerability check
-          dotnet list src/SimpleWeatherList.sln package --vulnerable --include-transitive || echo "Security scan completed"
+          dotnet list src/Ormico.DbPatchManager.sln package --vulnerable --include-transitive || echo "Security scan completed"
 
   create-hotfix-release:
     name: Create Hotfix Release
@@ -239,7 +260,6 @@ jobs:
       needs.validate-hotfix.outputs.is-valid == 'true' && 
       github.event_name == 'push' && 
       startsWith(github.ref, 'refs/heads/hotfix/')
-    environment: production
     
     steps:
       - name: Checkout code
@@ -267,51 +287,95 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          TAG_NAME="v${{ env.VERSION }}"
-          git tag -a "$TAG_NAME" -m "Hotfix release ${{ env.HOTFIX_VERSION }} (build ${{ env.BUILD_NUMBER }})"
+          TAG_NAME="v${VERSION}"
+          git tag -a "$TAG_NAME" -m "Hotfix release ${HOTFIX_VERSION} (build ${BUILD_NUMBER})"
           git push origin "$TAG_NAME"
           
           echo "Created tag: $TAG_NAME"
       
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/github-script@v6
         with:
-          tag_name: v${{ env.VERSION }}
-          release_name: Hotfix Release v${{ env.HOTFIX_VERSION }}
-          body: |
-            # Hotfix Release v${{ env.HOTFIX_VERSION }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            const version = process.env.VERSION;
+            const hotfixVersion = process.env.HOTFIX_VERSION;
+            const buildNumber = process.env.BUILD_NUMBER;
+            const commitSha = process.env.COMMIT_SHA;
+            
+            const releaseNotes = `# DbPatchManager Hotfix Release v${hotfixVersion}
             
             **Build Information:**
-            - Version: ${{ env.VERSION }}
-            - Build Number: ${{ env.BUILD_NUMBER }}
-            - Commit: ${{ env.COMMIT_SHA }}
+            - Version: ${version}
+            - Build Number: ${buildNumber}
+            - Commit: ${commitSha}
             - Branch: ${{ github.ref_name }}
             
             **Changes:**
             This is a hotfix release addressing critical issues in production.
             
-            **Deployment:**
-            - Ready for immediate production deployment
-            - Contains security and critical bug fixes
-            - Backward compatible with previous minor version
+            **Installation:**
+            
+            ### CLI Tool
+            1. Download and extract \`dbpatch-manager-cli-${version}.zip\`
+            2. Add the extracted directory to your PATH
+            3. Run \`dbpatch --help\` to get started
+            
+            ### NuGet Package
+            \`\`\`
+            dotnet add package Ormico.DbPatchManager.Common --version ${version}
+            \`\`\`
             
             **Artifacts:**
-            - Deployment package: hotfix-${{ env.VERSION }}.tar.gz
-            - Docker image: simple-weather-list:${{ env.VERSION }}
-          draft: false
-          prerelease: false
-      
-      - name: Upload release assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/hotfix-${{ env.VERSION }}.tar.gz
-          asset_name: hotfix-${{ env.VERSION }}.tar.gz
-          asset_content_type: application/gzip
+            - CLI Package: \`dbpatch-manager-cli-${version}.zip\`
+            - NuGet Package: \`Ormico.DbPatchManager.Common.${version}.nupkg\`
+            `;
+            
+            const release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `v${version}`,
+              target_commitish: context.sha,
+              name: `DbPatchManager Hotfix v${hotfixVersion}`,
+              body: releaseNotes,
+              draft: false,
+              prerelease: false
+            });
+            
+            console.log(`✅ Release created: ${release.data.html_url}`);
+            
+            // Upload release assets
+            const artifactsDir = "artifacts";
+            
+            // Upload CLI zip
+            const cliZipPath = path.join(artifactsDir, `dbpatch-manager-cli-${version}.zip`);
+            if (fs.existsSync(cliZipPath)) {
+              const cliZipData = fs.readFileSync(cliZipPath);
+              await github.rest.repos.uploadReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release.data.id,
+                name: `dbpatch-manager-cli-${version}.zip`,
+                data: cliZipData,
+              });
+              console.log('✅ CLI package uploaded');
+            }
+            
+            // Upload NuGet package
+            const nupkgPath = path.join(artifactsDir, `Ormico.DbPatchManager.Common.${version}.nupkg`);
+            if (fs.existsSync(nupkgPath)) {
+              const nupkgData = fs.readFileSync(nupkgPath);
+              await github.rest.repos.uploadReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release.data.id,
+                name: `Ormico.DbPatchManager.Common.${version}.nupkg`,
+                data: nupkgData,
+              });
+              console.log('✅ NuGet package uploaded');
+            }
 
   notify-completion:
     name: Notify Hotfix Completion

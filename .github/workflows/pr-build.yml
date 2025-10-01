@@ -134,11 +134,11 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
-        run: dotnet restore src/SimpleWeatherList.sln
+        run: dotnet restore src/Ormico.DbPatchManager.sln
 
       - name: Build application
         run: |
-          dotnet build src/SimpleWeatherList.sln \
+          dotnet build src/Ormico.DbPatchManager.sln \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
             --no-restore \
             -p:Version=${{ steps.version.outputs.build-version }} \
@@ -147,7 +147,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          dotnet test src/SimpleWeatherList.sln \
+          dotnet test src/Ormico.DbPatchManager.sln \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
             --no-build \
             --verbosity normal \
@@ -184,16 +184,13 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore src/SimpleWeatherList.sln
+        run: dotnet restore src/Ormico.DbPatchManager.sln
 
       - name: Run security scan
         run: |
-          # Install dotnet security scanning tool
-          dotnet tool install --global security-scan
-          
-          # Run security scan (this is a placeholder - replace with actual security scanning tool)
-          echo "Running security scan..."
-          # security-scan src/SimpleWeatherList.sln
+          echo "Running security scan for DbPatchManager..."
+          echo "Checking for known vulnerabilities in dependencies..."
+          dotnet list src/Ormico.DbPatchManager.sln package --vulnerable --include-transitive || true
 
       - name: Run dependency vulnerability check
         run: |
