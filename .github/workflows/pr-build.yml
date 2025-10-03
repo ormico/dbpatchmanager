@@ -8,6 +8,7 @@ on:
 permissions:
   pull-requests: write  # Allow creating PR comments
   checks: write         # Allow publishing test results
+  statuses: write       # Allow Super Linter to update status checks
 
 env:
   DOTNET_VERSION: '8.0.x'
@@ -407,6 +408,7 @@ jobs:
           VALIDATE_JSON: true
           LINTER_RULES_PATH: .github/linters
           SUPPRESS_POSIX_MISMATCH: true
+          DISABLE_GITHUB_STATUS_UPDATES: true
 
   # CLI package validation
   # Summary job
