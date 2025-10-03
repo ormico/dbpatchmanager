@@ -27,29 +27,31 @@ jobs:
       - name: Extract release information
         id: release-info
         run: |
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          echo "Branch name: $BRANCH_NAME"
+          $branchName = $env:GITHUB_REF -replace 'refs/heads/', ''
+          Write-Host "Branch name: $branchName"
           
           # Validate release branch naming: release/YYYY-MM-DD-NN
-          if [[ $BRANCH_NAME =~ ^release/([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+)$ ]]; then
-            RELEASE_ID="${BASH_REMATCH[1]}"
-            echo "release-id=$RELEASE_ID" >> $GITHUB_OUTPUT
-            echo "is-valid=true" >> $GITHUB_OUTPUT
-            echo "✓ Valid release branch: $BRANCH_NAME"
-            echo "✓ Release ID: $RELEASE_ID"
-          else
-            echo "is-valid=false" >> $GITHUB_OUTPUT
-            echo "❌ Invalid release branch name: $BRANCH_NAME"
-            echo "Expected format: release/YYYY-MM-DD-NN (e.g., release/2024-03-15-01)"
-          fi
+          if ($branchName -match '^release/([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+)$') {
+            $releaseId = $Matches[1]
+            "release-id=$releaseId" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            "is-valid=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            Write-Host "✓ Valid release branch: $branchName"
+            Write-Host "✓ Release ID: $releaseId"
+          } else {
+            "is-valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            Write-Host "❌ Invalid release branch name: $branchName"
+            Write-Host "Expected format: release/YYYY-MM-DD-NN (e.g., release/2024-03-15-01)"
+          }
+        shell: pwsh
 
       - name: Fail on invalid branch name
         if: steps.release-info.outputs.is-valid != 'true'
         run: |
-          echo "❌ Release branch name is invalid"
-          echo "Please use the format: release/YYYY-MM-DD-NN"
-          echo "Example: release/2024-03-15-01"
+          Write-Host "❌ Release branch name is invalid"
+          Write-Host "Please use the format: release/YYYY-MM-DD-NN"
+          Write-Host "Example: release/2024-03-15-01"
           exit 1
+        shell: pwsh
 
   # Build and create release artifacts
   build-release:
@@ -97,24 +99,27 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore src/Ormico.DbPatchManager.sln
+        shell: pwsh
 
       - name: Build application
         run: |
-          dotnet build src/Ormico.DbPatchManager.sln \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-restore \
-            -p:Version=${{ steps.version.outputs.full-version }} \
-            -p:AssemblyVersion=${{ steps.version.outputs.version }} \
+          dotnet build src/Ormico.DbPatchManager.sln `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-restore `
+            -p:Version=${{ steps.version.outputs.full-version }} `
+            -p:AssemblyVersion=${{ steps.version.outputs.version }} `
             -p:FileVersion=${{ steps.version.outputs.full-version }}
+        shell: pwsh
 
       - name: Run tests
         run: |
-          dotnet test src/Ormico.DbPatchManager.sln \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-build \
-            --verbosity normal \
-            --logger trx \
+          dotnet test src/Ormico.DbPatchManager.sln `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-build `
+            --verbosity normal `
+            --logger trx `
             --results-directory TestResults
+        shell: pwsh
 
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2

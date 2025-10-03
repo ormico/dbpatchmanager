@@ -39,11 +39,12 @@ jobs:
       - name: Get branch information
         id: branch
         run: |
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          BRANCH_HASH=$(echo $BRANCH_NAME | git hash-object --stdin | cut -c1-8)
-          echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-          echo "branch-hash=$BRANCH_HASH" >> $GITHUB_OUTPUT
-          echo "Branch: $BRANCH_NAME (hash: $BRANCH_HASH)"
+          $branchName = "${{ github.ref }}" -replace "refs/heads/", ""
+          $branchHash = ($branchName | Out-String | git hash-object --stdin).Substring(0,8)
+          "branch-name=$branchName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "branch-hash=$branchHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Branch: $branchName (hash: $branchHash)"
+        shell: pwsh
 
       - name: Get version information
         id: version
@@ -74,28 +75,31 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore src/Ormico.DbPatchManager.sln
+        shell: pwsh
 
       - name: Build application
         run: |
-          VERSION_TO_USE="${{ steps.preview.outputs.preview-version || steps.version.outputs.full-version }}"
-          echo "Building with version: $VERSION_TO_USE"
+          $versionToUse = "${{ steps.preview.outputs.preview-version || steps.version.outputs.full-version }}"
+          Write-Host "Building with version: $versionToUse"
           
-          dotnet build src/Ormico.DbPatchManager.sln \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-restore \
-            -p:Version=$VERSION_TO_USE \
-            -p:AssemblyVersion=${{ steps.version.outputs.version }} \
-            -p:FileVersion=$VERSION_TO_USE
+          dotnet build src/Ormico.DbPatchManager.sln `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-restore `
+            -p:Version=$versionToUse `
+            -p:AssemblyVersion=${{ steps.version.outputs.version }} `
+            -p:FileVersion=$versionToUse
+        shell: pwsh
 
       - name: Run unit tests
         run: |
-          dotnet test src/Ormico.DbPatchManager.sln \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-build \
-            --verbosity normal \
-            --logger trx \
-            --results-directory TestResults \
+          dotnet test src/Ormico.DbPatchManager.sln `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-build `
+            --verbosity normal `
+            --logger trx `
+            --results-directory TestResults `
             --collect:"XPlat Code Coverage"
+        shell: pwsh
 
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -144,15 +148,16 @@ jobs:
       - name: Create NuGet package
         if: ${{ inputs.create_preview }}
         run: |
-          VERSION_TO_USE="${{ steps.preview.outputs.preview-version || steps.version.outputs.full-version }}"
-          echo "Creating NuGet package with version: $VERSION_TO_USE"
+          $versionToUse = "${{ steps.preview.outputs.preview-version || steps.version.outputs.full-version }}"
+          Write-Host "Creating NuGet package with version: $versionToUse"
           
-          dotnet pack src/Ormico.DbPatchManager.Common/Ormico.DbPatchManager.Common.csproj \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-build \
-            -p:Version=$VERSION_TO_USE \
-            -p:PackageVersion=$VERSION_TO_USE \
+          dotnet pack src/Ormico.DbPatchManager.Common/Ormico.DbPatchManager.Common.csproj `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-build `
+            -p:Version=$versionToUse `
+            -p:PackageVersion=$versionToUse `
             --output artifacts/
+        shell: pwsh
 
       - name: Upload build artifacts
         if: ${{ inputs.create_preview }}
@@ -216,39 +221,46 @@ jobs:
 
       - name: Validate NuGet package
         run: |
-          VERSION="${{ needs.build-and-test.outputs.preview-version }}"
-          NUPKG_FILE="artifacts/Ormico.DbPatchManager.Common.$VERSION.nupkg"
+          $version = "${{ needs.build-and-test.outputs.preview-version }}"
+          $nupkgFile = "artifacts/Ormico.DbPatchManager.Common.$version.nupkg"
           
-          if [ ! -f "$NUPKG_FILE" ]; then
-              echo "❌ NuGet package not found: $NUPKG_FILE"
+          if (-not (Test-Path $nupkgFile)) {
+              Write-Host "❌ NuGet package not found: $nupkgFile"
               exit 1
-          fi
+          }
           
-          echo "✓ NuGet package found: $NUPKG_FILE"
-          ls -la "$NUPKG_FILE"
+          Write-Host "✓ NuGet package found: $nupkgFile"
+          Get-ChildItem $nupkgFile | Format-List
           
           # Validate package contents using dotnet
-          dotnet nuget verify "$NUPKG_FILE" || echo "Package verification completed"
+          try {
+            dotnet nuget verify "$nupkgFile"
+          } catch {
+            Write-Host "Package verification completed"
+          }
+        shell: pwsh
 
       - name: Create package manifest
         run: |
-          VERSION="${{ needs.build-and-test.outputs.preview-version }}"
+          $version = "${{ needs.build-and-test.outputs.preview-version }}"
+          $buildDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
           
-          cat > package-manifest.json << EOF
-          {
-            "cli_package": "dbpatch-manager-cli-$VERSION.zip",
-            "nuget_package": "Ormico.DbPatchManager.Common.$VERSION.nupkg",
-            "version": "$VERSION",
-            "branch": "${{ github.ref_name }}",
-            "commit": "${{ github.sha }}",
-            "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "build_number": "${{ github.run_number }}",
-            "workflow_run": "${{ github.run_id }}"
+          $manifest = @{
+            cli_package = "dbpatch-manager-cli-$version.zip"
+            nuget_package = "Ormico.DbPatchManager.Common.$version.nupkg"
+            version = "$version"
+            branch = "${{ github.ref_name }}"
+            commit = "${{ github.sha }}"
+            build_date = "$buildDate"
+            build_number = "${{ github.run_number }}"
+            workflow_run = "${{ github.run_id }}"
           }
-          EOF
           
-          echo "Package manifest:"
-          cat package-manifest.json
+          $manifest | ConvertTo-Json -Depth 10 | Out-File -FilePath "package-manifest.json" -Encoding utf8
+          
+          Write-Host "Package manifest:"
+          Get-Content "package-manifest.json"
+        shell: pwsh
 
       - name: Upload package manifest
         uses: actions/upload-artifact@v3

@@ -50,81 +50,100 @@ jobs:
 
       - name: Display test configuration
         run: |
-          echo "🧪 Test Configuration"
-          echo "Environment: ${{ inputs.test-environment }}"
-          echo "Test Types: ${{ inputs.test-types }}"
-          echo "CLI Package: ${{ inputs.cli-package-path || 'N/A' }}"
-          echo "Deployment URL: ${{ inputs.deployment-url || 'N/A' }}"
+          Write-Host "🧪 Test Configuration"
+          Write-Host "Environment: ${{ inputs.test-environment }}"
+          Write-Host "Test Types: ${{ inputs.test-types }}"
+          Write-Host "CLI Package: ${{ inputs.cli-package-path || 'N/A' }}"
+          Write-Host "Deployment URL: ${{ inputs.deployment-url || 'N/A' }}"
+        shell: pwsh
 
       - name: Restore dependencies
         run: dotnet restore src/Ormico.DbPatchManager.sln
+        shell: pwsh
 
       - name: Run unit tests
         if: contains(inputs.test-types, 'unit')
         run: |
-          echo "🔬 Running unit tests..."
-          dotnet test src/Ormico.DbPatchManager.sln \
-            --configuration Release \
-            --no-build \
-            --verbosity normal \
-            --logger trx \
-            --results-directory TestResults/Unit \
-            --collect:"XPlat Code Coverage" \
+          Write-Host "🔬 Running unit tests..."
+          dotnet test src/Ormico.DbPatchManager.sln `
+            --configuration Release `
+            --no-build `
+            --verbosity normal `
+            --logger trx `
+            --results-directory TestResults/Unit `
+            --collect:"XPlat Code Coverage" `
             --filter "Category=Unit|Category!=Integration&Category!=E2E"
+        shell: pwsh
 
       - name: Run integration tests
         if: contains(inputs.test-types, 'integration')
         run: |
-          echo "🔧 Running integration tests..."
+          Write-Host "🔧 Running integration tests..."
           # Set up test database or other integration test requirements
-          dotnet test src/Ormico.DbPatchManager.sln \
-            --configuration Release \
-            --no-build \
-            --verbosity normal \
-            --logger trx \
-            --results-directory TestResults/Integration \
+          dotnet test src/Ormico.DbPatchManager.sln `
+            --configuration Release `
+            --no-build `
+            --verbosity normal `
+            --logger trx `
+            --results-directory TestResults/Integration `
             --filter "Category=Integration"
+        shell: pwsh
 
       - name: Run CLI tests
         if: contains(inputs.test-types, 'e2e')
         run: |
-          echo "🎭 Running CLI E2E tests..."
+          Write-Host "🎭 Running CLI E2E tests..."
           
           # Build CLI for testing
-          dotnet build src/Ormico.DbPatchManager.CLI/Ormico.DbPatchManager.CLI.csproj \
+          dotnet build src/Ormico.DbPatchManager.CLI/Ormico.DbPatchManager.CLI.csproj `
             --configuration Release
           
-          CLI_PATH="src/Ormico.DbPatchManager.CLI/bin/Release/net8.0"
+          $cliPath = "src/Ormico.DbPatchManager.CLI/bin/Release/net8.0"
           
-          echo "Testing CLI help command..."
-          dotnet "$CLI_PATH/dbpatch.dll" --help
+          Write-Host "Testing CLI help command..."
+          dotnet "$cliPath/dbpatch.dll" --help
           
-          echo "Testing CLI version command..."
-          dotnet "$CLI_PATH/dbpatch.dll" --version || echo "Version command test completed"
+          Write-Host "Testing CLI version command..."
+          try {
+            dotnet "$cliPath/dbpatch.dll" --version
+          } catch {
+            Write-Host "Version command test completed"
+          }
           
           # Add more CLI-specific tests here
-          echo "✅ CLI tests completed"
+          Write-Host "✅ CLI tests completed"
+        shell: pwsh
 
       - name: Run smoke tests
         if: contains(inputs.test-types, 'smoke')
         run: |
-          echo "💨 Running smoke tests..."
+          Write-Host "💨 Running smoke tests..."
           
           # Test CLI installation and basic functionality
-          CLI_PATH="src/Ormico.DbPatchManager.CLI/bin/Release/net8.0"
+          $cliPath = "src/Ormico.DbPatchManager.CLI/bin/Release/net8.0"
           
-          echo "Testing CLI basic functionality..."
-          dotnet "$CLI_PATH/dbpatch.dll" --help > /dev/null 2>&1 && echo "✅ Help command works"
+          Write-Host "Testing CLI basic functionality..."
+          try {
+            dotnet "$cliPath/dbpatch.dll" --help | Out-Null
+            Write-Host "✅ Help command works"
+          } catch {
+            Write-Host "Help command test completed"
+          }
           
           # Test NuGet package installation (simulated)
-          echo "Testing NuGet package installation..."
+          Write-Host "Testing NuGet package installation..."
           dotnet new console -n smoke-test-project -o smoke-test
-          cd smoke-test
-          dotnet add package Ormico.DbPatchManager.Common --source ../artifacts || echo "Package installation test (simulated)"
-          cd ..
-          rm -rf smoke-test
+          Set-Location smoke-test
+          try {
+            dotnet add package Ormico.DbPatchManager.Common --source ../artifacts
+          } catch {
+            Write-Host "Package installation test (simulated)"
+          }
+          Set-Location ..
+          Remove-Item smoke-test -Recurse -Force -ErrorAction SilentlyContinue
           
-          echo "✅ Smoke tests completed"
+          Write-Host "✅ Smoke tests completed"
+        shell: pwsh
 
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -179,6 +198,7 @@ jobs:
       - name: Test failure notification
         if: failure()
         run: |
-          echo "❌ Tests failed in ${{ inputs.test-environment }} environment"
-          echo "Failed test types: ${{ inputs.test-types }}"
+          Write-Host "❌ Tests failed in ${{ inputs.test-environment }} environment"
+          Write-Host "Failed test types: ${{ inputs.test-types }}"
           exit 1
+        shell: pwsh
