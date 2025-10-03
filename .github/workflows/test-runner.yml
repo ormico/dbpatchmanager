@@ -5,32 +5,32 @@ on:
   workflow_call:
     inputs:
       test-environment:
-        description: 'Environment where tests are running'
+        description: "Environment where tests are running"
         required: true
         type: string
       test-types:
-        description: 'Types of tests to run (unit,integration,e2e,smoke)'
+        description: "Types of tests to run (unit,integration,e2e,smoke)"
         required: false
-        default: 'unit'
+        default: "unit"
         type: string
       cli-package-path:
-        description: 'Path to CLI package to test'
+        description: "Path to CLI package to test"
         required: false
         type: string
       deployment-url:
-        description: 'URL of deployed application for testing'
+        description: "URL of deployed application for testing"
         required: false
         type: string
     outputs:
       test-results:
-        description: 'Test execution results'
+        description: "Test execution results"
         value: ${{ jobs.run-tests.outputs.test-results }}
       test-report-url:
-        description: 'URL to test report'
+        description: "URL to test report"
         value: ${{ jobs.run-tests.outputs.test-report-url }}
 
 env:
-  DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: "8.0.x"
 
 jobs:
   run-tests:
@@ -93,23 +93,23 @@ jobs:
         if: contains(inputs.test-types, 'e2e')
         run: |
           Write-Host "🎭 Running CLI E2E tests..."
-          
+
           # Build CLI for testing
           dotnet build src/Ormico.DbPatchManager.CLI/Ormico.DbPatchManager.CLI.csproj `
             --configuration Release
-          
+
           $cliPath = "src/Ormico.DbPatchManager.CLI/bin/Release/net8.0"
-          
+
           Write-Host "Testing CLI help command..."
           dotnet "$cliPath/dbpatch.dll" --help
-          
+
           Write-Host "Testing CLI version command..."
           try {
             dotnet "$cliPath/dbpatch.dll" --version
           } catch {
             Write-Host "Version command test completed"
           }
-          
+
           # Add more CLI-specific tests here
           Write-Host "✅ CLI tests completed"
         shell: pwsh
@@ -118,10 +118,10 @@ jobs:
         if: contains(inputs.test-types, 'smoke')
         run: |
           Write-Host "💨 Running smoke tests..."
-          
+
           # Test CLI installation and basic functionality
           $cliPath = "src/Ormico.DbPatchManager.CLI/bin/Release/net8.0"
-          
+
           Write-Host "Testing CLI basic functionality..."
           try {
             dotnet "$cliPath/dbpatch.dll" --help | Out-Null
@@ -129,7 +129,7 @@ jobs:
           } catch {
             Write-Host "Help command test completed"
           }
-          
+
           # Test NuGet package installation (simulated)
           Write-Host "Testing NuGet package installation..."
           dotnet new console -n smoke-test-project -o smoke-test
@@ -141,7 +141,7 @@ jobs:
           }
           Set-Location ..
           Remove-Item smoke-test -Recurse -Force -ErrorAction SilentlyContinue
-          
+
           Write-Host "✅ Smoke tests completed"
         shell: pwsh
 
@@ -180,7 +180,7 @@ jobs:
           $testTypes = "${{ inputs.test-types }}" -split ","
           $environment = "${{ inputs.test-environment }}"
           $runNumber = "${{ github.run_number }}"
-          
+
           $summary = @{
               environment = $environment
               testTypes = $testTypes
@@ -188,10 +188,10 @@ jobs:
               timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
               success = $true  # This would be determined by actual test results
           }
-          
+
           $summaryJson = $summary | ConvertTo-Json -Compress
           Write-Host "Test summary: $summaryJson"
-          
+
           "test-results=$summaryJson" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "test-report-url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 

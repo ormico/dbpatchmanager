@@ -1,0 +1,132 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# YAML files (GitHub Actions workflows, Docker Compose, etc.)
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# JSON files
+[*.json]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Markdown files
+[*.md]
+indent_style = space
+indent_size = 2
+max_line_length = 80
+trim_trailing_whitespace = false
+insert_final_newline = true
+# Allow trailing spaces for line breaks (2 spaces = <br>)
+# Set to false to prevent auto-removal of intentional trailing spaces
+
+# README and main documentation files
+[{README,CHANGELOG,CONTRIBUTING,LICENSE}.md]
+indent_style = space
+indent_size = 2
+max_line_length = 80
+trim_trailing_whitespace = false
+insert_final_newline = true
+
+# Documentation in docs folder (allow longer lines for tables/code)
+[docs/*.md]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+trim_trailing_whitespace = false
+insert_final_newline = true
+
+# C# files
+[*.cs]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# C# project files
+[*.{csproj,props,targets}]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Solution files
+[*.sln]
+indent_style = tab
+tab_width = 4
+end_of_line = crlf
+
+# PowerShell files
+[*.{ps1,psm1,psd1}]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Shell scripts
+[*.{sh,bash}]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+end_of_line = lf
+
+# Dockerfile
+[Dockerfile*]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Configuration files
+[*.{ini,cfg,conf,config}]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Package files
+[{package.json,package-lock.json,*.nuspec}]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Git files
+[.gitignore]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# License files
+[LICENSE*]
+indent_style = space
+indent_size = 2
+max_line_length = 80
+trim_trailing_whitespace = true
+insert_final_newline = true

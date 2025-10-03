@@ -2,18 +2,18 @@ name: Release Creation
 
 on:
   push:
-    branches: [ 'release/*' ]
+    branches: ["release/*"]
   workflow_dispatch:
     inputs:
       deploy_to_dev:
-        description: 'Deploy to development environment'
+        description: "Deploy to development environment"
         required: false
         default: true
         type: boolean
 
 env:
-  DOTNET_VERSION: '8.0.x'
-  BUILD_CONFIGURATION: 'Release'
+  DOTNET_VERSION: "8.0.x"
+  BUILD_CONFIGURATION: "Release"
 
 jobs:
   # Validate release branch and extract release information
@@ -29,7 +29,7 @@ jobs:
         run: |
           $branchName = $env:GITHUB_REF -replace 'refs/heads/', ''
           Write-Host "Branch name: $branchName"
-          
+
           # Validate release branch naming: release/YYYY-MM-DD-NN
           if ($branchName -match '^release/([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+)$') {
             $releaseId = $Matches[1]
@@ -77,7 +77,7 @@ jobs:
         run: |
           $releaseId = "${{ needs.validate-release.outputs.release-id }}"
           ./.github/scripts/version-management.ps1 -Action get-build -BuildNumber ${{ github.run_number }}
-          
+
           # Create release tag
           if (Test-Path "version.json") {
               $versionData = Get-Content version.json -Raw | ConvertFrom-Json
@@ -137,17 +137,17 @@ jobs:
           $version = "${{ steps.version.outputs.full-version }}"
           $artifactName = "dbpatch-manager-cli-$version"
           $cliPath = "src/Ormico.DbPatchManager.CLI/bin/${{ env.BUILD_CONFIGURATION }}/net8.0"
-          
+
           # Create artifact directory
           New-Item -ItemType Directory -Path "release-artifacts" -Force
-          
+
           # Copy CLI files to staging
           $stagingPath = "release-artifacts/staging"
           New-Item -ItemType Directory -Path $stagingPath -Force
-          
+
           # Copy all CLI output files
           Copy-Item -Path "$cliPath/*" -Destination $stagingPath -Recurse -Force
-          
+
           # Ensure script files have correct line endings and permissions
           if (Test-Path "$stagingPath/dbpatch") {
               # Convert to Unix line endings for the shell script
@@ -155,12 +155,12 @@ jobs:
               $content = $content -replace "`r`n", "`n"
               Set-Content "$stagingPath/dbpatch" -Value $content -NoNewline
           }
-          
+
           # Create zip archive
           Compress-Archive -Path "$stagingPath/*" -DestinationPath "release-artifacts/$artifactName.zip" -Force
-          
+
           Write-Host "Created CLI artifact: release-artifacts/$artifactName.zip"
-          
+
           # List contents for verification
           Get-ChildItem "release-artifacts/$artifactName.zip" | ForEach-Object { Write-Host "Artifact size: $($_.Length) bytes" }
 
@@ -168,7 +168,7 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.full-version }}"
           echo "Creating NuGet package with version: $VERSION"
-          
+
           dotnet pack src/Ormico.DbPatchManager.Common/Ormico.DbPatchManager.Common.csproj \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
             --no-build \
@@ -210,20 +210,20 @@ jobs:
         run: |
           $version = "${{ needs.build-release.outputs.full-version }}"
           $zipFile = "release-artifacts/dbpatch-manager-cli-$version.zip"
-          
+
           if (-not (Test-Path $zipFile)) {
               Write-Error "CLI package not found: $zipFile"
               exit 1
           }
-          
+
           Write-Host "✓ CLI package found: $zipFile"
           $zipInfo = Get-Item $zipFile
           Write-Host "  Size: $($zipInfo.Length) bytes"
-          
+
           # Extract and validate contents
           $extractPath = "temp-extract"
           Expand-Archive -Path $zipFile -DestinationPath $extractPath -Force
-          
+
           $requiredFiles = @("dbpatch.dll", "dbpatch.cmd", "dbpatch")
           foreach ($file in $requiredFiles) {
               if (Test-Path "$extractPath/$file") {
@@ -233,7 +233,7 @@ jobs:
                   exit 1
               }
           }
-          
+
           # Test CLI execution
           Set-Location $extractPath
           dotnet dbpatch.dll --help > $null 2>&1
@@ -247,18 +247,18 @@ jobs:
         run: |
           VERSION="${{ needs.build-release.outputs.full-version }}"
           NUPKG_FILE="release-artifacts/Ormico.DbPatchManager.Common.$VERSION.nupkg"
-          
+
           if [ ! -f "$NUPKG_FILE" ]; then
               echo "❌ NuGet package not found: $NUPKG_FILE"
               exit 1
           fi
-          
+
           echo "✓ NuGet package found: $NUPKG_FILE"
           ls -la "$NUPKG_FILE"
-          
+
           # Validate package contents using dotnet
           dotnet nuget verify "$NUPKG_FILE" || echo "Package verification completed"
-          
+
           echo "✅ Release packages validated successfully"
 
   # Create GitHub release
@@ -282,38 +282,38 @@ jobs:
           RELEASE_ID="${{ needs.validate-release.outputs.release-id }}"
           RELEASE_TAG="${{ needs.build-release.outputs.release-tag }}"
           VERSION="${{ needs.build-release.outputs.full-version }}"
-          
+
           # Generate release notes (this could be enhanced with automated changelog generation)
           cat > release-notes.md << EOF
           # DbPatchManager Release $RELEASE_TAG
-          
+
           ## 📦 Release Information
           - **Release ID**: $RELEASE_ID
           - **Version**: $VERSION
           - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           - **Branch**: ${GITHUB_REF#refs/heads/}
           - **Commit**: ${{ github.sha }}
-          
+
           ## � Release Assets
           - **CLI Package**: \`dbpatch-manager-cli-$VERSION.zip\` - Complete CLI tool with executable, script files, and dependencies
           - **NuGet Package**: \`Ormico.DbPatchManager.Common.$VERSION.nupkg\` - Common library for database module development
-          
+
           ## 📋 Changes
           _Release notes would be generated from commit history or changelog_
-          
+
           ## � Installation
-          
+
           ### CLI Tool
           1. Download and extract \`dbpatch-manager-cli-$VERSION.zip\`
           2. Add the extracted directory to your PATH
           3. Run \`dbpatch --help\` to get started
-          
+
           ### NuGet Package
           \`\`\`
           dotnet add package Ormico.DbPatchManager.Common --version $VERSION
           \`\`\`
           EOF
-          
+
           echo "Release notes generated:"
           cat release-notes.md
 
@@ -324,7 +324,7 @@ jobs:
             const fs = require('fs');
             const path = require('path');
             const releaseNotes = fs.readFileSync('release-notes.md', 'utf8');
-            
+
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -335,13 +335,13 @@ jobs:
               draft: false,
               prerelease: false
             });
-            
+
             console.log(`✅ Release created: ${release.data.html_url}`);
-            
+
             // Upload release assets
             const version = "${{ needs.build-release.outputs.full-version }}";
             const artifactsDir = "release-artifacts";
-            
+
             // Upload CLI zip
             const cliZipPath = path.join(artifactsDir, `dbpatch-manager-cli-${version}.zip`);
             if (fs.existsSync(cliZipPath)) {
@@ -355,7 +355,7 @@ jobs:
               });
               console.log('✅ CLI package uploaded');
             }
-            
+
             // Upload NuGet package
             const nupkgPath = path.join(artifactsDir, `Ormico.DbPatchManager.Common.${version}.nupkg`);
             if (fs.existsSync(nupkgPath)) {
@@ -369,7 +369,7 @@ jobs:
               });
               console.log('✅ NuGet package uploaded');
             }
-            
+
             // Set output for subsequent jobs
             core.setOutput('release-id', release.data.id);
             core.setOutput('release-url', release.data.html_url);
@@ -378,8 +378,14 @@ jobs:
   publish-nuget:
     name: Publish to NuGet
     runs-on: ubuntu-latest
-    needs: [validate-release, build-release, package-validation, create-github-release]
-    if: ${{ inputs.deploy_to_dev != false }}  # Deploy by default unless explicitly disabled
+    needs:
+      [
+        validate-release,
+        build-release,
+        package-validation,
+        create-github-release,
+      ]
+    if: ${{ inputs.deploy_to_dev != false }} # Deploy by default unless explicitly disabled
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -394,11 +400,11 @@ jobs:
         run: |
           VERSION="${{ needs.build-release.outputs.full-version }}"
           NUPKG_FILE="release-artifacts/Ormico.DbPatchManager.Common.$VERSION.nupkg"
-          
+
           echo "🚀 Publishing NuGet package"
           echo "Package: $NUPKG_FILE"
           echo "Version: $VERSION"
-          
+
           # Publish to NuGet.org
           dotnet nuget push "$NUPKG_FILE" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
           echo "✅ NuGet package published to nuget.org"
@@ -406,15 +412,15 @@ jobs:
       - name: Verify package availability
         run: |
           VERSION="${{ needs.build-release.outputs.full-version }}"
-          
+
           echo "🔍 Verifying package availability on NuGet.org"
           echo "Package: Ormico.DbPatchManager.Common"
           echo "Version: $VERSION"
-          
+
           # Wait a moment for the package to be indexed
           echo "Waiting 30 seconds for package indexing..."
           sleep 30
-          
+
           # Check if package is available (this will retry a few times)
           for i in {1..5}; do
             echo "Verification attempt $i/5..."
@@ -431,7 +437,14 @@ jobs:
   release-summary:
     name: Release Summary
     runs-on: ubuntu-latest
-    needs: [validate-release, build-release, package-validation, create-github-release, publish-nuget]
+    needs:
+      [
+        validate-release,
+        build-release,
+        package-validation,
+        create-github-release,
+        publish-nuget,
+      ]
     if: always()
     steps:
       - name: Determine overall result
@@ -441,12 +454,12 @@ jobs:
           PACKAGE_RESULT="${{ needs.package-validation.result }}"
           RELEASE_RESULT="${{ needs.create-github-release.result }}"
           PUBLISH_RESULT="${{ needs.publish-nuget.result }}"
-          
+
           echo "Build: $BUILD_RESULT"
           echo "Package Validation: $PACKAGE_RESULT"
           echo "GitHub Release: $RELEASE_RESULT"
           echo "NuGet Publish: $PUBLISH_RESULT"
-          
+
           if [[ "$BUILD_RESULT" != "success" ]] || [[ "$PACKAGE_RESULT" != "success" ]] || [[ "$RELEASE_RESULT" != "success" ]]; then
             echo "overall-result=failure" >> $GITHUB_OUTPUT
             echo "❌ Release creation failed"
@@ -463,27 +476,27 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            
+
             const buildResult = "${{ needs.build-release.result }}";
             const packageResult = "${{ needs.package-validation.result }}";
             const releaseResult = "${{ needs.create-github-release.result }}";
             const publishResult = "${{ needs.publish-nuget.result }}";
             const overallResult = "${{ steps.result.outputs.overall-result }}";
             const version = "${{ needs.build-release.outputs.full-version }}";
-            
+
             const getEmoji = (result) => {
               if (result === 'success') return '✅';
               if (result === 'failure') return '❌';
               if (result === 'skipped') return '⏭️';
               return '⚠️';
             };
-            
+
             let summary = `# 🎉 DbPatchManager Release Creation Results\n\n`;
             summary += `**Release ID:** \`${{ needs.validate-release.outputs.release-id }}\`\n`;
             summary += `**Version:** \`${version}\`\n`;
             summary += `**Release Tag:** \`${{ needs.build-release.outputs.release-tag }}\`\n`;
             summary += `**Overall Result:** ${getEmoji(overallResult)} ${overallResult}\n\n`;
-            
+
             summary += `## Release Steps\n\n`;
             summary += `| Step | Status |\n`;
             summary += `|------|--------|\n`;
@@ -491,13 +504,13 @@ jobs:
             summary += `| Package Validation | ${getEmoji(packageResult)} ${packageResult} |\n`;
             summary += `| GitHub Release | ${getEmoji(releaseResult)} ${releaseResult} |\n`;
             summary += `| NuGet Publish | ${getEmoji(publishResult)} ${publishResult} |\n`;
-            
+
             summary += `\n## 📦 Release Artifacts\n\n`;
             summary += `- **CLI Package:** \`dbpatch-manager-cli-${version}.zip\`\n`;
             summary += `- **NuGet Package:** \`Ormico.DbPatchManager.Common.${version}.nupkg\`\n`;
-            
+
             summary += `\n**Workflow Run:** [\`${{ github.run_id }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
-            
+
             // Write to GitHub Step Summary
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
 

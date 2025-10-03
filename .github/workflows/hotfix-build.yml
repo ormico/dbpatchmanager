@@ -3,19 +3,19 @@ name: Hotfix Build and Release
 on:
   push:
     branches:
-      - 'hotfix/**'
+      - "hotfix/**"
   pull_request:
     branches:
-      - 'main'
+      - "main"
     types: [opened, synchronize, reopened]
     # Only trigger for PRs from hotfix branches
     paths-ignore:
-      - '**.md'
-      - 'docs/**'
+      - "**.md"
+      - "docs/**"
 
 env:
-  DOTNET_VERSION: '8.0.x'
-  BUILD_CONFIGURATION: 'Release'
+  DOTNET_VERSION: "8.0.x"
+  BUILD_CONFIGURATION: "Release"
 
 jobs:
   validate-hotfix:
@@ -26,13 +26,13 @@ jobs:
       hotfix-version: ${{ steps.extract-version.outputs.hotfix-version }}
       target-version: ${{ steps.extract-version.outputs.target-version }}
       is-valid: ${{ steps.validate.outputs.is-valid }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Extract hotfix version
         id: extract-version
         run: |
@@ -41,9 +41,9 @@ jobs:
           } else {
             $branchName = "${{ github.ref_name }}"
           }
-          
+
           Write-Host "Branch name: $branchName"
-          
+
           # Extract version from hotfix branch name (hotfix/v1.2.3)
           if ($branchName -match '^hotfix/v([0-9]+\.[0-9]+\.[0-9]+)$') {
             $hotfixVersion = $Matches[1]
@@ -55,15 +55,15 @@ jobs:
             exit 1
           }
         shell: pwsh
-      
+
       - name: Validate hotfix requirements
         id: validate
         run: |
           $hotfixVersion = "${{ steps.extract-version.outputs.hotfix-version }}"
-          
+
           # Check if this is a valid patch version increment
           Write-Host "Validating hotfix version: $hotfixVersion"
-          
+
           # Get the latest tag to compare
           try {
             $latestTag = git describe --tags --abbrev=0 2>$null
@@ -72,21 +72,21 @@ jobs:
             $latestTag = "v0.0.0"
           }
           Write-Host "Latest tag: $latestTag"
-          
+
           # Extract version numbers
           $latestVersion = $latestTag -replace '^v', ''
           $latestParts = $latestVersion -split '\.'
           $hotfixParts = $hotfixVersion -split '\.'
-          
+
           # Validate version format and increment
           if ($hotfixParts.Count -ne 3) {
             Write-Host "❌ Hotfix version must have exactly 3 parts (major.minor.patch)"
             exit 1
           }
-          
+
           # Check if hotfix is a valid patch increment
-          if ($hotfixParts[0] -eq $latestParts[0] -and 
-              $hotfixParts[1] -eq $latestParts[1] -and 
+          if ($hotfixParts[0] -eq $latestParts[0] -and
+              $hotfixParts[1] -eq $latestParts[1] -and
               [int]$hotfixParts[2] -gt [int]$latestParts[2]) {
             Write-Host "✓ Valid hotfix version increment"
             "is-valid=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
@@ -102,33 +102,33 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate-hotfix
     if: needs.validate-hotfix.outputs.is-valid == 'true'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      
+
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-      
+
       - name: Update version
         shell: pwsh
         run: |
           $targetVersion = "${{ needs.validate-hotfix.outputs.target-version }}"
           $buildNumber = ${{ github.run_number }}
           $fullVersion = "$targetVersion.$buildNumber"
-          
+
           Write-Host "Setting hotfix version: $fullVersion"
-          
+
           # Update version.json
           $versionData = @{
             Major = [int]($targetVersion -split '\.')[0]
@@ -139,21 +139,21 @@ jobs:
             IsPreRelease = $false
             PreReleaseTag = ""
           }
-          
+
           $versionData | ConvertTo-Json | Set-Content -Path "version.json"
           Write-Host "Updated version.json:"
           Get-Content "version.json"
-      
+
       - name: Restore dependencies
         run: dotnet restore src/Ormico.DbPatchManager.sln
-      
+
       - name: Build solution
         run: |
           dotnet build src/Ormico.DbPatchManager.sln \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
             --no-restore \
             --verbosity minimal
-      
+
       - name: Run tests
         run: |
           dotnet test src/Ormico.DbPatchManager.sln \
@@ -162,14 +162,14 @@ jobs:
             --verbosity minimal \
             --logger trx \
             --results-directory TestResults
-      
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: hotfix-test-results
           path: TestResults/
-      
+
       - name: Create CLI artifact package
         shell: pwsh
         run: |
@@ -178,17 +178,17 @@ jobs:
           $fullVersion = "$hotfixVersion.$buildNumber"
           $artifactName = "dbpatch-manager-cli-$fullVersion"
           $cliPath = "src/Ormico.DbPatchManager.CLI/bin/${{ env.BUILD_CONFIGURATION }}/net8.0"
-          
+
           # Create artifact directory
           New-Item -ItemType Directory -Path "artifacts" -Force
-          
+
           # Copy CLI files to staging
           $stagingPath = "artifacts/staging"
           New-Item -ItemType Directory -Path $stagingPath -Force
-          
+
           # Copy all CLI output files
           Copy-Item -Path "$cliPath/*" -Destination $stagingPath -Recurse -Force
-          
+
           # Ensure script files have correct line endings and permissions
           if (Test-Path "$stagingPath/dbpatch") {
               # Convert to Unix line endings for the shell script
@@ -196,12 +196,12 @@ jobs:
               $content = $content -replace "`r`n", "`n"
               Set-Content "$stagingPath/dbpatch" -Value $content -NoNewline
           }
-          
+
           # Create zip archive
           Compress-Archive -Path "$stagingPath/*" -DestinationPath "artifacts/$artifactName.zip" -Force
-          
+
           Write-Host "Created CLI artifact: artifacts/$artifactName.zip"
-          
+
           # Create version info
           @"
           VERSION=$fullVersion
@@ -215,9 +215,9 @@ jobs:
           HOTFIX_VERSION="${{ needs.validate-hotfix.outputs.hotfix-version }}"
           BUILD_NUMBER="${{ github.run_number }}"
           FULL_VERSION="$HOTFIX_VERSION.$BUILD_NUMBER"
-          
+
           echo "Creating NuGet package with version: $FULL_VERSION"
-          
+
           dotnet pack src/Ormico.DbPatchManager.Common/Ormico.DbPatchManager.Common.csproj \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
             --no-build \
@@ -239,23 +239,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate-hotfix, build-and-test]
     if: needs.validate-hotfix.outputs.is-valid == 'true'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      
+
       - name: Restore dependencies
         run: dotnet restore src/Ormico.DbPatchManager.sln
-      
+
       - name: Run security scan
         run: |
           echo "Running security scan for DbPatchManager hotfix..."
-          
+
           # Run vulnerability check
           dotnet list src/Ormico.DbPatchManager.sln package --vulnerable --include-transitive || echo "Security scan completed"
 
@@ -264,23 +264,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate-hotfix, build-and-test, security-scan]
     if: |
-      needs.validate-hotfix.outputs.is-valid == 'true' && 
-      github.event_name == 'push' && 
+      needs.validate-hotfix.outputs.is-valid == 'true' &&
+      github.event_name == 'push' &&
       startsWith(github.ref, 'refs/heads/hotfix/')
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: hotfix-build-${{ needs.validate-hotfix.outputs.hotfix-version }}
           path: artifacts/
-      
+
       - name: Load version info
         run: |
           source artifacts/version.env
@@ -288,58 +288,58 @@ jobs:
           echo "HOTFIX_VERSION=$HOTFIX_VERSION" >> $GITHUB_ENV
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
-      
+
       - name: Create and push tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           TAG_NAME="v${VERSION}"
           git tag -a "$TAG_NAME" -m "Hotfix release ${HOTFIX_VERSION} (build ${BUILD_NUMBER})"
           git push origin "$TAG_NAME"
-          
+
           echo "Created tag: $TAG_NAME"
-      
+
       - name: Create GitHub Release
         uses: actions/github-script@v6
         with:
           script: |
             const fs = require('fs');
             const path = require('path');
-            
+
             const version = process.env.VERSION;
             const hotfixVersion = process.env.HOTFIX_VERSION;
             const buildNumber = process.env.BUILD_NUMBER;
             const commitSha = process.env.COMMIT_SHA;
-            
+
             const releaseNotes = `# DbPatchManager Hotfix Release v${hotfixVersion}
-            
+
             **Build Information:**
             - Version: ${version}
             - Build Number: ${buildNumber}
             - Commit: ${commitSha}
             - Branch: ${{ github.ref_name }}
-            
+
             **Changes:**
             This is a hotfix release addressing critical issues in production.
-            
+
             **Installation:**
-            
+
             ### CLI Tool
             1. Download and extract \`dbpatch-manager-cli-${version}.zip\`
             2. Add the extracted directory to your PATH
             3. Run \`dbpatch --help\` to get started
-            
+
             ### NuGet Package
             \`\`\`
             dotnet add package Ormico.DbPatchManager.Common --version ${version}
             \`\`\`
-            
+
             **Artifacts:**
             - CLI Package: \`dbpatch-manager-cli-${version}.zip\`
             - NuGet Package: \`Ormico.DbPatchManager.Common.${version}.nupkg\`
             `;
-            
+
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -350,12 +350,12 @@ jobs:
               draft: false,
               prerelease: false
             });
-            
+
             console.log(`✅ Release created: ${release.data.html_url}`);
-            
+
             // Upload release assets
             const artifactsDir = "artifacts";
-            
+
             // Upload CLI zip
             const cliZipPath = path.join(artifactsDir, `dbpatch-manager-cli-${version}.zip`);
             if (fs.existsSync(cliZipPath)) {
@@ -369,7 +369,7 @@ jobs:
               });
               console.log('✅ CLI package uploaded');
             }
-            
+
             // Upload NuGet package
             const nupkgPath = path.join(artifactsDir, `Ormico.DbPatchManager.Common.${version}.nupkg`);
             if (fs.existsSync(nupkgPath)) {
@@ -387,14 +387,15 @@ jobs:
   notify-completion:
     name: notify-completion
     runs-on: ubuntu-latest
-    needs: [validate-hotfix, build-and-test, security-scan, create-hotfix-release]
+    needs:
+      [validate-hotfix, build-and-test, security-scan, create-hotfix-release]
     if: always()
-    
+
     steps:
       - name: Create completion summary
         run: |
           HOTFIX_VERSION="${{ needs.validate-hotfix.outputs.hotfix-version }}"
-          
+
           echo "## Hotfix Process Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Hotfix Version:** v$HOTFIX_VERSION" >> $GITHUB_STEP_SUMMARY
@@ -402,7 +403,7 @@ jobs:
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [[ "${{ needs.create-hotfix-release.result }}" == "success" ]]; then
             echo "✅ **Release Created Successfully**" >> $GITHUB_STEP_SUMMARY
             echo "- Release tagged as v$HOTFIX_VERSION" >> $GITHUB_STEP_SUMMARY
@@ -412,7 +413,7 @@ jobs:
             echo "❌ **Release Creation Failed**" >> $GITHUB_STEP_SUMMARY
             echo "- Manual intervention required" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
           echo "- Create PR to merge hotfix changes back to main branch" >> $GITHUB_STEP_SUMMARY

@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       create_preview:
-        description: 'Create preview release'
+        description: "Create preview release"
         required: false
         default: false
         type: boolean
       preview_suffix:
-        description: 'Custom preview suffix (optional)'
+        description: "Custom preview suffix (optional)"
         required: false
-        default: ''
+        default: ""
         type: string
 
 env:
-  DOTNET_VERSION: '8.0.x'
-  BUILD_CONFIGURATION: 'Release'
+  DOTNET_VERSION: "8.0.x"
+  BUILD_CONFIGURATION: "Release"
 
 jobs:
   # Build and test the feature branch
@@ -62,7 +62,7 @@ jobs:
               $branchHash = "${{ steps.branch.outputs.branch-hash }}"
               $previewSuffix = "preview-$branchHash-$('{0:D2}' -f ${{ github.run_number }})"
           }
-          
+
           ./.github/scripts/version-management.ps1 -Action set-preview -PreviewSuffix $previewSuffix -BuildNumber ${{ github.run_number }}
 
       - name: Cache NuGet packages
@@ -81,7 +81,7 @@ jobs:
         run: |
           $versionToUse = "${{ steps.preview.outputs.preview-version || steps.version.outputs.full-version }}"
           Write-Host "Building with version: $versionToUse"
-          
+
           dotnet build src/Ormico.DbPatchManager.sln `
             --configuration ${{ env.BUILD_CONFIGURATION }} `
             --no-restore `
@@ -118,17 +118,17 @@ jobs:
           $version = "${{ steps.preview.outputs.preview-version || steps.version.outputs.full-version }}"
           $artifactName = "dbpatch-manager-cli-$version"
           $cliPath = "src/Ormico.DbPatchManager.CLI/bin/${{ env.BUILD_CONFIGURATION }}/net8.0"
-          
+
           # Create artifact directory
           New-Item -ItemType Directory -Path "artifacts" -Force
-          
+
           # Copy CLI files to staging
           $stagingPath = "artifacts/staging"
           New-Item -ItemType Directory -Path $stagingPath -Force
-          
+
           # Copy all CLI output files
           Copy-Item -Path "$cliPath/*" -Destination $stagingPath -Recurse -Force
-          
+
           # Ensure script files have correct line endings and permissions
           if (Test-Path "$stagingPath/dbpatch") {
               # Convert to Unix line endings for the shell script
@@ -136,12 +136,12 @@ jobs:
               $content = $content -replace "`r`n", "`n"
               Set-Content "$stagingPath/dbpatch" -Value $content -NoNewline
           }
-          
+
           # Create zip archive
           Compress-Archive -Path "$stagingPath/*" -DestinationPath "artifacts/$artifactName.zip" -Force
-          
+
           Write-Host "Created CLI artifact: artifacts/$artifactName.zip"
-          
+
           # List contents for verification
           Get-ChildItem "artifacts/$artifactName.zip" | ForEach-Object { Write-Host "Artifact size: $($_.Length) bytes" }
 
@@ -150,7 +150,7 @@ jobs:
         run: |
           $versionToUse = "${{ steps.preview.outputs.preview-version || steps.version.outputs.full-version }}"
           Write-Host "Creating NuGet package with version: $versionToUse"
-          
+
           dotnet pack src/Ormico.DbPatchManager.Common/Ormico.DbPatchManager.Common.csproj `
             --configuration ${{ env.BUILD_CONFIGURATION }} `
             --no-build `
@@ -195,20 +195,20 @@ jobs:
         run: |
           $version = "${{ needs.build-and-test.outputs.preview-version }}"
           $zipFile = "artifacts/dbpatch-manager-cli-$version.zip"
-          
+
           if (-not (Test-Path $zipFile)) {
               Write-Error "CLI package not found: $zipFile"
               exit 1
           }
-          
+
           Write-Host "✓ CLI package found: $zipFile"
           $zipInfo = Get-Item $zipFile
           Write-Host "  Size: $($zipInfo.Length) bytes"
-          
+
           # Extract and validate contents
           $extractPath = "temp-extract"
           Expand-Archive -Path $zipFile -DestinationPath $extractPath -Force
-          
+
           $requiredFiles = @("dbpatch.dll", "dbpatch.cmd", "dbpatch")
           foreach ($file in $requiredFiles) {
               if (Test-Path "$extractPath/$file") {
@@ -223,15 +223,15 @@ jobs:
         run: |
           $version = "${{ needs.build-and-test.outputs.preview-version }}"
           $nupkgFile = "artifacts/Ormico.DbPatchManager.Common.$version.nupkg"
-          
+
           if (-not (Test-Path $nupkgFile)) {
               Write-Host "❌ NuGet package not found: $nupkgFile"
               exit 1
           }
-          
+
           Write-Host "✓ NuGet package found: $nupkgFile"
           Get-ChildItem $nupkgFile | Format-List
-          
+
           # Validate package contents using dotnet
           try {
             dotnet nuget verify "$nupkgFile"
@@ -244,7 +244,7 @@ jobs:
         run: |
           $version = "${{ needs.build-and-test.outputs.preview-version }}"
           $buildDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-          
+
           $manifest = @{
             cli_package = "dbpatch-manager-cli-$version.zip"
             nuget_package = "Ormico.DbPatchManager.Common.$version.nupkg"
@@ -255,9 +255,9 @@ jobs:
             build_number = "${{ github.run_number }}"
             workflow_run = "${{ github.run_id }}"
           }
-          
+
           $manifest | ConvertTo-Json -Depth 10 | Out-File -FilePath "package-manifest.json" -Encoding utf8
-          
+
           Write-Host "Package manifest:"
           Get-Content "package-manifest.json"
         shell: pwsh
@@ -296,7 +296,7 @@ jobs:
         run: |
           echo "Running security audit for DbPatchManager..."
           echo "Preview version: ${{ needs.build-and-test.outputs.preview-version }}"
-          
+
           # Check for any security vulnerabilities in dependencies
           echo "✓ Security scan completed"
 
@@ -326,15 +326,15 @@ jobs:
         run: |
           $version = "${{ needs.build-and-test.outputs.preview-version }}"
           $zipFile = "artifacts/dbpatch-manager-cli-$version.zip"
-          
+
           echo "Testing CLI installation for preview release"
           echo "Preview version: $version"
           echo "CLI package: $zipFile"
-          
+
           # Extract CLI package
           $installPath = "test-install"
           Expand-Archive -Path $zipFile -DestinationPath $installPath -Force
-          
+
           # Test CLI execution (dry run)
           Set-Location $installPath
           if (Test-Path "dbpatch.dll") {
@@ -355,17 +355,17 @@ jobs:
         run: |
           VERSION="${{ needs.build-and-test.outputs.preview-version }}"
           NUPKG_FILE="artifacts/Ormico.DbPatchManager.Common.$VERSION.nupkg"
-          
+
           echo "Testing NuGet package installation"
           echo "Package: $NUPKG_FILE"
-          
+
           # Create a test project to verify package installation
           mkdir test-nuget
           cd test-nuget
-          
+
           dotnet new console
           dotnet add package Ormico.DbPatchManager.Common --source ../artifacts --version $VERSION
-          
+
           if [ $? -eq 0 ]; then
               echo "✓ NuGet package installation successful"
           else
@@ -377,7 +377,8 @@ jobs:
   feature-build-summary:
     name: Feature Build Summary
     runs-on: ubuntu-latest
-    needs: [build-and-test, package-validation, security-scan, installation-test]
+    needs:
+      [build-and-test, package-validation, security-scan, installation-test]
     if: always()
     steps:
       - name: Determine overall result
@@ -387,19 +388,19 @@ jobs:
           PACKAGE_RESULT="${{ needs.package-validation.result }}"
           SECURITY_RESULT="${{ needs.security-scan.result }}"
           INSTALL_RESULT="${{ needs.installation-test.result }}"
-          
+
           echo "Build and Test: $BUILD_RESULT"
           echo "Package Validation: $PACKAGE_RESULT"
           echo "Security Scan: $SECURITY_RESULT"
           echo "Installation Test: $INSTALL_RESULT"
-          
+
           # Build and test must succeed
           if [[ "$BUILD_RESULT" != "success" ]]; then
             echo "overall-result=failure" >> $GITHUB_OUTPUT
             echo "❌ Build and test failed"
             exit 0
           fi
-          
+
           # If preview was requested, other jobs must succeed or be skipped
           if [[ "${{ inputs.create_preview }}" == "true" ]]; then
             if [[ "$PACKAGE_RESULT" == "failure" ]] || [[ "$SECURITY_RESULT" == "failure" ]] || [[ "$INSTALL_RESULT" == "failure" ]]; then
@@ -419,7 +420,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            
+
             const buildResult = "${{ needs.build-and-test.result }}";
             const packageResult = "${{ needs.package-validation.result }}";
             const securityResult = "${{ needs.security-scan.result }}";
@@ -427,28 +428,28 @@ jobs:
             const overallResult = "${{ steps.result.outputs.overall-result }}";
             const createPreview = "${{ inputs.create_preview }}" === "true";
             const previewVersion = "${{ needs.build-and-test.outputs.preview-version }}";
-            
+
             const getEmoji = (result) => {
               if (result === 'success') return '✅';
               if (result === 'failure') return '❌';
               if (result === 'skipped') return '⏭️';
               return '⚠️';
             };
-            
+
             let summary = `# 🚀 DbPatchManager Feature Branch Build Results\n\n`;
             summary += `**Branch:** \`${{ github.ref_name }}\`\n`;
             summary += `**Overall Result:** ${getEmoji(overallResult)} ${overallResult}\n\n`;
-            
+
             summary += `## Build Steps\n\n`;
             summary += `| Step | Status |\n`;
             summary += `|------|--------|\n`;
             summary += `| Build & Test | ${getEmoji(buildResult)} ${buildResult} |\n`;
-            
+
             if (createPreview) {
               summary += `| Package Validation | ${getEmoji(packageResult)} ${packageResult} |\n`;
               summary += `| Security Scan | ${getEmoji(securityResult)} ${securityResult} |\n`;
               summary += `| Installation Test | ${getEmoji(installResult)} ${installResult} |\n`;
-              
+
               if (previewVersion) {
                 summary += `\n## 📦 Preview Release\n\n`;
                 summary += `**Version:** \`${previewVersion}\`\n`;
@@ -456,9 +457,9 @@ jobs:
                 summary += `**NuGet Package:** \`Ormico.DbPatchManager.Common.${previewVersion}.nupkg\`\n`;
               }
             }
-            
+
             summary += `\n**Workflow Run:** [\`${{ github.run_id }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
-            
+
             // Write to GitHub Step Summary
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
 

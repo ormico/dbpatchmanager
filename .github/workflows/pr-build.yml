@@ -2,17 +2,17 @@ name: Pull Request Build
 
 on:
   pull_request:
-    branches: [ main, 'release/*' ]
+    branches: [main, "release/*"]
     types: [opened, synchronize, reopened]
 
 permissions:
-  pull-requests: write  # Allow creating PR comments
-  checks: write         # Allow publishing test results
-  statuses: write       # Allow Super Linter to update status checks
+  pull-requests: write # Allow creating PR comments
+  checks: write # Allow publishing test results
+  statuses: write # Allow Super Linter to update status checks
 
 env:
-  DOTNET_VERSION: '8.0.x'
-  BUILD_CONFIGURATION: 'Release'
+  DOTNET_VERSION: "8.0.x"
+  BUILD_CONFIGURATION: "Release"
 
 jobs:
   # Job to validate versionto main
@@ -24,7 +24,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch full history for comparison
+          fetch-depth: 0 # Fetch full history for comparison
 
       - name: Checkout main branch
         run: git checkout main
@@ -67,11 +67,11 @@ jobs:
         run: |
           $mainVersion = "${{ steps.main-version.outputs.main-version }}"
           $prVersion = "${{ steps.pr-version.outputs.pr-version }}"
-          
+
           Write-Host "Validating version increment:"
           Write-Host "  Main: $mainVersion"
           Write-Host "  PR:   $prVersion"
-          
+
           # Special case: If main branch has no version file (0.0.0) and PR introduces a valid version
           if ($mainVersion -eq "0.0.0" -and $prVersion -ne "0.0.0") {
               if ($prVersion -match "^(\d+)\.(\d+)\.(\d+)$") {
@@ -84,14 +84,14 @@ jobs:
                   exit 1
               }
           }
-          
+
           # Both versions are 0.0.0 - invalid state
           if ($mainVersion -eq "0.0.0" -and $prVersion -eq "0.0.0") {
               Write-Error "❌ PR must include a valid version.json file"
               Write-Host "Please create a version.json file with an initial version (e.g., 0.1.0, 1.0.0)"
               exit 1
           }
-          
+
           # Parse versions for normal increment validation
           if ($mainVersion -match "^(\d+)\.(\d+)\.(\d+)$") {
               $mainMajor = [int]$Matches[1]
@@ -101,7 +101,7 @@ jobs:
               Write-Error "Invalid main version format: $mainVersion"
               exit 1
           }
-          
+
           if ($prVersion -match "^(\d+)\.(\d+)\.(\d+)$") {
               $prMajor = [int]$Matches[1]
               $prMinor = [int]$Matches[2]
@@ -110,14 +110,14 @@ jobs:
               Write-Error "Invalid PR version format: $prVersion"
               exit 1
           }
-          
+
           # Check if version was incremented properly
           $majorIncremented = $prMajor -gt $mainMajor
           $minorIncremented = $prMinor -gt $mainMinor -and $prMajor -eq $mainMajor
           $patchIncremented = $prPatch -gt $mainPatch -and $prMinor -eq $mainMinor -and $prMajor -eq $mainMajor
-          
+
           $validIncrement = $false
-          
+
           if ($majorIncremented -and $prMinor -eq 0 -and $prPatch -eq 0) {
               Write-Host "✓ Valid major version increment"
               $validIncrement = $true
@@ -130,7 +130,7 @@ jobs:
               Write-Host "✓ Valid patch version increment"
               $validIncrement = $true
           }
-          
+
           if (-not $validIncrement) {
               Write-Error "❌ Version must be incremented for PRs to main branch"
               Write-Host "Current main version: $mainVersion"
@@ -215,9 +215,9 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "🧪 Testing CLI build and functionality"
-          
+
           $cliPath = "src/Ormico.DbPatchManager.CLI/bin/${{ env.BUILD_CONFIGURATION }}/net8.0"
-          
+
           # Test that essential files are created
           $requiredFiles = @("dbpatch.dll", "dbpatch.cmd", "dbpatch")
           foreach ($file in $requiredFiles) {
@@ -227,7 +227,7 @@ jobs:
               }
               Write-Host "✓ Found required file: $file"
           }
-          
+
           # Test CLI execution (allow this to fail without failing the build)
           Write-Host "Testing CLI help command..."
           $null = dotnet "$cliPath/dbpatch.dll" --help 2>&1
@@ -238,9 +238,9 @@ jobs:
               Write-Host "⚠ CLI help command failed (exit code: $cliExitCode)"
               Write-Host "This may be expected if the CLI requires specific setup or configuration"
           }
-          
+
           Write-Host "✅ CLI testing completed"
-          
+
           # Reset exit code to success since CLI help failure is acceptable
           $global:LASTEXITCODE = 0
 
@@ -311,7 +311,7 @@ jobs:
         id: format-check
         run: |
           Write-Host "🔍 Checking code formatting..."
-          
+
           # Check if formatting changes would be needed
           try {
             dotnet format src/Ormico.DbPatchManager.sln --verify-no-changes --verbosity diagnostic
@@ -320,22 +320,22 @@ jobs:
             Write-Host "Formatting issues detected"
             $formatExitCode = 2
           }
-          
+
           if ($formatExitCode -eq 0) {
             Write-Host "No formatting changes needed"
             "has-issues=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           } else {
             Write-Host "Code formatting issues found"
             "has-issues=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-            
+
             # Run format to see what would change (for reporting purposes)
             Write-Host "Getting diff for reporting..."
             dotnet format src/Ormico.DbPatchManager.sln --verbosity diagnostic
-            
+
             # Show what files would be changed
             Write-Host "Files that need formatting:"
             git diff --name-only
-            
+
             # Reset changes since we're only checking
             git checkout -- .
           }
@@ -347,9 +347,9 @@ jobs:
         with:
           script: |
             const comment = \`## 🔧 Code Formatting Issues Found
-            
+
             This PR has code formatting issues that need to be fixed before merging.
-            
+
             **To fix these issues locally:**
             \\\`\\\`\\\`bash
             dotnet format src/Ormico.DbPatchManager.sln
@@ -357,16 +357,16 @@ jobs:
             git commit -m "Fix code formatting"
             git push
             \\\`\\\`\\\`
-            
+
             **What will be fixed:**
             - EditorConfig formatting rules applied
             - Indentation and whitespace corrected
             - Using statements organized
             - Code style consistency improved
-            
+
             After running the format command, commit and push the changes to update this PR.
             \`;
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -423,7 +423,7 @@ jobs:
           echo "Build and Test: ${{ needs.build-and-test.result }}"
           echo "Security Scan: ${{ needs.security-scan.result }}"
           echo "Code Quality: ${{ needs.code-quality.result }}"
-          
+
           if [[ "${{ needs.build-and-test.result }}" != "success" ]] || \
              [[ "${{ needs.security-scan.result }}" != "success" ]] || \
              [[ "${{ needs.code-quality.result }}" != "success" ]]; then
@@ -443,36 +443,36 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
-            
+
             const buildResult = "${{ needs.build-and-test.result }}";
             const securityResult = "${{ needs.security-scan.result }}";
             const qualityResult = "${{ needs.code-quality.result }}";
-            
+
             const getEmoji = (result) => result === 'success' ? '✅' : result === 'failure' ? '❌' : '⚠️';
-            
+
             const comment = `## 🔄 DbPatchManager PR Build Results
-            
+
             | Check | Status |
             |-------|--------|
             | Build & Test (includes CLI) | ${getEmoji(buildResult)} ${buildResult} |
             | Security Scan | ${getEmoji(securityResult)} ${securityResult} |
             | Code Quality | ${getEmoji(qualityResult)} ${qualityResult} |
-            
+
             **Run ID:** [\`${{ github.run_id }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             `;
-            
+
             // Find existing comment and update or create new one
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number
             });
-            
-            const existingComment = comments.data.find(c => 
-              c.user.login === 'github-actions[bot]' && 
+
+            const existingComment = comments.data.find(c =>
+              c.user.login === 'github-actions[bot]' &&
               c.body.includes('PR Build Results')
             );
-            
+
             if (existingComment) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,

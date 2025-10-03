@@ -1,0 +1,213 @@
+# Markdownlint configuration for Super Linter compatibility
+# See: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+# Enable all rules by default
+default: true
+
+# MD001 - Heading levels should only increment by one level at a time
+MD001: true
+
+# MD002 - First heading should be a top level heading (disabled - often not needed)
+MD002: false
+
+# MD003 - Heading style (ATX preferred: # ## ###)
+MD003:
+  style: atx
+
+# MD004 - Unordered list style (dash preferred)
+MD004:
+  style: dash
+
+# MD005 - Inconsistent indentation for list items at the same level
+MD005: true
+
+# MD006 - Consider starting bulleted lists at the beginning of the line
+MD006: true
+
+# MD007 - Unordered list indentation (2 spaces)
+MD007:
+  indent: 2
+
+# MD009 - Trailing spaces (allow 2 spaces for line breaks)
+MD009:
+  br_spaces: 2
+
+# MD010 - Hard tabs
+MD010:
+  code_blocks: true
+
+# MD011 - Reversed link syntax
+MD011: true
+
+# MD012 - Multiple consecutive blank lines (max 2)
+MD012:
+  maximum: 2
+
+# MD013 - Line length (80 chars for text, 120 for code blocks)
+MD013:
+  line_length: 80
+  heading_line_length: 80
+  code_block_line_length: 120
+  code_blocks: true
+  tables: true
+  headings: true
+  strict: false
+  stern: false
+
+# MD014 - Dollar signs used before commands without showing output
+MD014: true
+
+# MD018 - No space after hash on atx style heading
+MD018: true
+
+# MD019 - Multiple spaces after hash on atx style heading
+MD019: true
+
+# MD020 - No space inside hashes on closed atx style heading
+MD020: true
+
+# MD021 - Multiple spaces inside hashes on closed atx style heading
+MD021: true
+
+# MD022 - Headings should be surrounded by blank lines
+MD022:
+  lines_above: 1
+  lines_below: 1
+
+# MD023 - Headings must start at the beginning of the line
+MD023: true
+
+# MD024 - Multiple headings with the same content (allow different nesting)
+MD024:
+  siblings_only: false
+
+# MD025 - Multiple top level headings in the same document
+MD025:
+  level: 1
+  front_matter_title: ""
+
+# MD026 - Trailing punctuation in heading
+MD026:
+  punctuation: ".,;:!。，；：！"
+
+# MD027 - Multiple spaces after blockquote symbol
+MD027: true
+
+# MD028 - Blank line inside blockquote
+MD028: true
+
+# MD029 - Ordered list item prefix (ordered numbers)
+MD029:
+  style: ordered
+
+# MD030 - Spaces after list markers
+MD030:
+  ul_single: 1
+  ol_single: 1
+  ul_multi: 1
+  ol_multi: 1
+
+# MD031 - Fenced code blocks should be surrounded by blank lines
+MD031: true
+
+# MD032 - Lists should be surrounded by blank lines
+MD032: true
+
+# MD033 - Allow specific HTML elements
+MD033:
+  allowed_elements:
+    - br
+    - details
+    - summary
+    - img
+    - kbd
+    - sub
+    - sup
+
+# MD034 - Bare URL used
+MD034: true
+
+# MD035 - Horizontal rule style
+MD035:
+  style: "---"
+
+# MD036 - Emphasis used instead of a heading
+MD036:
+  punctuation: ".,;:!?。，；：！？"
+
+# MD037 - Spaces inside emphasis markers
+MD037: true
+
+# MD038 - Spaces inside code span elements
+MD038: true
+
+# MD039 - Spaces inside link text
+MD039: true
+
+# MD040 - Fenced code blocks should have a language specified
+MD040: true
+
+# MD041 - First line in file should be a top level heading
+MD041:
+  level: 1
+  front_matter_title: ""
+
+# MD042 - No empty links
+MD042: true
+
+# MD043 - Required heading structure (disabled - too restrictive)
+MD043: false
+
+# MD044 - Proper names should have the correct capitalization
+MD044:
+  names:
+    - JavaScript
+    - TypeScript
+    - PowerShell
+    - GitHub
+    - GitLab
+    - BitBucket
+    - CodeCommit
+    - CircleCI
+    - TravisCI
+    - DbPatchManager
+    - .NET
+    - NuGet
+    - YAML
+    - JSON
+    - Markdown
+    - SQL Server
+    - ODBC
+  code_blocks: true
+  html_elements: true
+
+# MD045 - Images should have alternate text (alt text)
+MD045: true
+
+# MD046 - Code block style (fenced preferred)
+MD046:
+  style: fenced
+
+# MD047 - Files should end with a single newline character
+MD047: true
+
+# MD048 - Code fence style (backtick preferred)
+MD048:
+  style: backtick
+
+# MD049 - Emphasis style (asterisk preferred)
+MD049:
+  style: asterisk
+
+# MD050 - Strong style (asterisk preferred)
+MD050:
+  style: asterisk
+
+# MD051 - Link fragments should be valid
+MD051: true
+
+# MD052 - Reference links and images should use a label that is defined
+MD052: true
+
+# MD053 - Link and image reference definitions should be needed
+MD053: true
