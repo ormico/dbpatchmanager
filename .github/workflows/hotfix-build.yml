@@ -19,7 +19,7 @@ env:
 
 jobs:
   validate-hotfix:
-    name: Validate Hotfix Branch
+    name: validate-hotfix
     runs-on: ubuntu-latest
     if: startsWith(github.head_ref, 'hotfix/') || startsWith(github.ref, 'refs/heads/hotfix/')
     outputs:
@@ -98,7 +98,7 @@ jobs:
         shell: pwsh
 
   build-and-test:
-    name: Build and Test Hotfix
+    name: build-and-test
     runs-on: ubuntu-latest
     needs: validate-hotfix
     if: needs.validate-hotfix.outputs.is-valid == 'true'
@@ -235,7 +235,7 @@ jobs:
             artifacts/version.env
 
   security-scan:
-    name: Security Scan
+    name: security-scan
     runs-on: ubuntu-latest
     needs: [validate-hotfix, build-and-test]
     if: needs.validate-hotfix.outputs.is-valid == 'true'
@@ -260,7 +260,7 @@ jobs:
           dotnet list src/Ormico.DbPatchManager.sln package --vulnerable --include-transitive || echo "Security scan completed"
 
   create-hotfix-release:
-    name: Create Hotfix Release
+    name: create-hotfix-release
     runs-on: ubuntu-latest
     needs: [validate-hotfix, build-and-test, security-scan]
     if: |
@@ -385,7 +385,7 @@ jobs:
             }
 
   notify-completion:
-    name: Notify Hotfix Completion
+    name: notify-completion
     runs-on: ubuntu-latest
     needs: [validate-hotfix, build-and-test, security-scan, create-hotfix-release]
     if: always()
