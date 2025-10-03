@@ -1,11 +1,13 @@
-﻿using NUnit.Framework;
-using Ormico.DbPatchManager.Logic;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using NUnit.Framework;
+
+using Ormico.DbPatchManager.Logic;
 
 namespace Ormico.DbPatchManager.Logic.Tests
 {

@@ -1,10 +1,12 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Ormico.DbPatchManager.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
+
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+using Ormico.DbPatchManager.Common;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -29,12 +31,12 @@ namespace Ormico.DbPatchManager.Logic
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
-        IFileSystem _io;
+        readonly IFileSystem _io;
 
         /// <summary>
         /// Path and name of file to read and write.
         /// </summary>
-        string _filePath;
+        readonly string _filePath;
 
         /// <summary>
         /// Path and name of secondary file to read and write.
@@ -43,7 +45,7 @@ namespace Ormico.DbPatchManager.Logic
         /// in the main file which is checked into source control. The connection string could
         /// be placed in he local file which is not checked into source control.
         /// </summary>
-        string _localFilePath;
+        readonly string _localFilePath;
 
         /// <summary>
         /// Read DatabaseBuildConfiguration data from file path passed to constructor.

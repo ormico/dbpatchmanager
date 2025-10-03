@@ -1,10 +1,11 @@
-﻿using Ormico.DbPatchManager.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using Ormico.DbPatchManager.Common;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -34,11 +35,11 @@ namespace Ormico.DbPatchManager.Logic
         }
 
         DatabaseBuildConfiguration _configuration;
-        string ScriptOverridesFolder = @"ScriptOverrides";
+        readonly string ScriptOverridesFolder = @"ScriptOverrides";
         //todo: not sure if making these .sql is best since not all databases are sql
-        string AddInstalledPatchFileName = "AddInstalledPatch.sql";
-        string GetInstalledPatchesFileName = "GetInstalledPatches.sql";
-        string InitPatchTableFileName = "InitPatchTable.sql";
+        readonly string AddInstalledPatchFileName = "AddInstalledPatch.sql";
+        readonly string GetInstalledPatchesFileName = "GetInstalledPatches.sql";
+        readonly string InitPatchTableFileName = "InitPatchTable.sql";
 
         readonly string _configFileName;
         readonly string _configLocalFileName;
