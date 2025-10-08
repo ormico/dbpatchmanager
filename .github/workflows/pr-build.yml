@@ -15,155 +15,70 @@ env:
   BUILD_CONFIGURATION: "Release"
 
 jobs:
-  # Job to validate versionto main
+  # Job to calculate version using GitVersion
   version-check:
     name: version-check
     runs-on: ubuntu-latest
-    if: github.base_ref == 'main'
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      majorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}
+      assemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}
+      informationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch full history for comparison
+          fetch-depth: 0 # Required for GitVersion
 
-      - name: Checkout main branch
-        run: git checkout main
-        shell: pwsh
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.10.2
+        with:
+          versionSpec: "5.x"
 
-      - name: Get main branch version
-        id: main-version
-        shell: pwsh
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.10.2
+        with:
+          useConfigFile: true
+
+      - name: Display GitVersion outputs
         run: |
-          if (Test-Path "version.json") {
-              $versionData = Get-Content version.json -Raw | ConvertFrom-Json
-              $mainVersion = $versionData.version
-          } else {
-              Write-Warning "version.json not found on main branch. Using default version 0.0.0"
-              $mainVersion = "0.0.0"
-          }
-          Write-Host "Main branch version: $mainVersion"
-          "main-version=$mainVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-
-      - name: Checkout PR branch
-        run: git checkout ${{ github.head_ref }}
+          Write-Host "Calculated Version Information:"
+          Write-Host "  SemVer: ${{ steps.gitversion.outputs.semVer }}"
+          Write-Host "  MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
+          Write-Host "  AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
+          Write-Host "  InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
         shell: pwsh
-
-      - name: Get PR branch version
-        id: pr-version
-        shell: pwsh
-        run: |
-          if (Test-Path "version.json") {
-              $versionData = Get-Content version.json -Raw | ConvertFrom-Json
-              $prVersion = $versionData.version
-          } else {
-              Write-Warning "version.json not found on PR branch. Using default version 0.0.0"
-              $prVersion = "0.0.0"
-          }
-          Write-Host "PR branch version: $prVersion"
-          "pr-version=$prVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-
-      - name: Validate version increment
-        shell: pwsh
-        run: |
-          $mainVersion = "${{ steps.main-version.outputs.main-version }}"
-          $prVersion = "${{ steps.pr-version.outputs.pr-version }}"
-
-          Write-Host "Validating version increment:"
-          Write-Host "  Main: $mainVersion"
-          Write-Host "  PR:   $prVersion"
-
-          # Special case: If main branch has no version file (0.0.0) and PR introduces a valid version
-          if ($mainVersion -eq "0.0.0" -and $prVersion -ne "0.0.0") {
-              if ($prVersion -match "^(\d+)\.(\d+)\.(\d+)$") {
-                  Write-Host "✓ Valid initial version setup: $prVersion"
-                  Write-Host "Main branch has no version file, PR introduces version $prVersion"
-                  exit 0
-              } else {
-                  Write-Error "❌ Invalid version format: $prVersion"
-                  Write-Host "Version must follow semantic versioning (e.g., 1.0.0, 0.1.0, 0.0.1)"
-                  exit 1
-              }
-          }
-
-          # Both versions are 0.0.0 - invalid state
-          if ($mainVersion -eq "0.0.0" -and $prVersion -eq "0.0.0") {
-              Write-Error "❌ PR must include a valid version.json file"
-              Write-Host "Please create a version.json file with an initial version (e.g., 0.1.0, 1.0.0)"
-              exit 1
-          }
-
-          # Parse versions for normal increment validation
-          if ($mainVersion -match "^(\d+)\.(\d+)\.(\d+)$") {
-              $mainMajor = [int]$Matches[1]
-              $mainMinor = [int]$Matches[2]
-              $mainPatch = [int]$Matches[3]
-          } else {
-              Write-Error "Invalid main version format: $mainVersion"
-              exit 1
-          }
-
-          if ($prVersion -match "^(\d+)\.(\d+)\.(\d+)$") {
-              $prMajor = [int]$Matches[1]
-              $prMinor = [int]$Matches[2]
-              $prPatch = [int]$Matches[3]
-          } else {
-              Write-Error "Invalid PR version format: $prVersion"
-              exit 1
-          }
-
-          # Check if version was incremented properly
-          $majorIncremented = $prMajor -gt $mainMajor
-          $minorIncremented = $prMinor -gt $mainMinor -and $prMajor -eq $mainMajor
-          $patchIncremented = $prPatch -gt $mainPatch -and $prMinor -eq $mainMinor -and $prMajor -eq $mainMajor
-
-          $validIncrement = $false
-
-          if ($majorIncremented -and $prMinor -eq 0 -and $prPatch -eq 0) {
-              Write-Host "✓ Valid major version increment"
-              $validIncrement = $true
-          }
-          elseif ($minorIncremented -and $prPatch -eq 0) {
-              Write-Host "✓ Valid minor version increment"
-              $validIncrement = $true
-          }
-          elseif ($patchIncremented) {
-              Write-Host "✓ Valid patch version increment"
-              $validIncrement = $true
-          }
-
-          if (-not $validIncrement) {
-              Write-Error "❌ Version must be incremented for PRs to main branch"
-              Write-Host "Current main version: $mainVersion"
-              Write-Host "PR version: $prVersion"
-              Write-Host ""
-              Write-Host "Valid increments would be:"
-              Write-Host "  Major: $($mainMajor + 1).0.0 (breaking changes)"
-              Write-Host "  Minor: $mainMajor.$($mainMinor + 1).0 (new features)"
-              Write-Host "  Patch: $mainMajor.$mainMinor.$($mainPatch + 1) (bug fixes)"
-              exit 1
-          }
 
   # Main build and test job
   build-and-test:
     name: build-and-test
     runs-on: ubuntu-latest
+    needs: version-check
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for GitVersion
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Get version information
-        id: version
-        shell: pwsh
-        run: |
-          ./.github/scripts/version-management.ps1 -Action get-build -BuildNumber ${{ github.run_number }}
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.10.2
+        with:
+          versionSpec: "5.x"
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.10.2
+        with:
+          useConfigFile: true
 
       - name: Cache NuGet packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
@@ -179,9 +94,10 @@ jobs:
           dotnet build src/Ormico.DbPatchManager.sln `
             --configuration ${{ env.BUILD_CONFIGURATION }} `
             --no-restore `
-            -p:Version=${{ steps.version.outputs.build-version }} `
-            -p:AssemblyVersion=${{ steps.version.outputs.version }} `
-            -p:FileVersion=${{ steps.version.outputs.build-version }}
+            -p:Version=${{ steps.gitversion.outputs.semVer }} `
+            -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} `
+            -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} `
+            -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
         shell: pwsh
 
       - name: Run unit tests

@@ -42,6 +42,31 @@ If you install dbpatch to somewhere other than `/usr/local/lib/dbpatch` you may 
 
 If you wish to install a version other than latest, each Release comes with an install shell script specific for that version starting with v2.1.1
 
+## Version Management
+
+This project uses [GitVersion](https://gitversion.net/) for automated semantic versioning based on Git history and branch naming conventions. Versions are automatically calculated - no manual version file updates required!
+
+**Quick Reference:**
+- 📖 [GitVersion Quick Reference](docs/GITVERSION-QUICK-REFERENCE.md) - Developer reference card
+- 🧪 [GitVersion Test Walkthrough](docs/GITVERSION-TEST-WALKTHROUGH.md) - Testing guide
+
+**Commit Message Keywords:**
+```bash
++semver: major    # Breaking changes (2.x.x → 3.0.0)
++semver: minor    # New features (2.2.x → 2.3.0)
++semver: patch    # Bug fixes (2.2.1 → 2.2.2)
++semver: none     # No version change
+```
+
+**Branch Versioning:**
+- `main` - Stable versions (e.g., `2.2.1`)
+- `feature/*` - Alpha versions (e.g., `2.2.2-alpha.1`)
+
+**Release Process:**
+- Merge feature branches to `main` when ready
+- Tag main to create releases: `git tag v2.2.1`
+- GitHub releases are created automatically from tags
+
 ## Create new db project
 ```MyProject> dbpatch init --dbtype sqlserver```
 
