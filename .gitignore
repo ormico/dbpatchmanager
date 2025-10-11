@@ -16,4 +16,5 @@ src/Ormico.DbPatchManager.CLI/deb/
 
 # Local development files (session notes, drafts, personal docs)
 .local/
-.copilot-instructions.md
+.vscode/settings.json
+.vscode/copilot-instructions.md

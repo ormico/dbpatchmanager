@@ -47,10 +47,7 @@
     "allow_different_nesting": true,
     "siblings_only": false
   },
-  "MD025": {
-    "level": 1,
-    "front_matter_title": ""
-  },
+  "MD025": false,
   "MD026": {
     "punctuation": ".,;:!。，；：！"
   },
@@ -86,17 +83,12 @@
   "MD035": {
     "style": "---"
   },
-  "MD036": {
-    "punctuation": ".,;:!?。，；：！？"
-  },
+  "MD036": false,
   "MD037": true,
   "MD038": true,
   "MD039": true,
-  "MD040": true,
-  "MD041": {
-    "level": 1,
-    "front_matter_title": ""
-  },
+  "MD040": false,
+  "MD041": false,
   "MD042": true,
   "MD043": false,
   "MD044": {
