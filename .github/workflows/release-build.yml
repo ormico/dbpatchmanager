@@ -1,0 +1,628 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v2.1.3, etc.
+
+permissions:
+  contents: write  # Needed to create GitHub releases
+  packages: write  # Needed to publish packages
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  BUILD_CONFIGURATION: "Release"
+
+jobs:
+  # Job to calculate version using GitVersion
+  version-check:
+    name: version-check
+    runs-on: ubuntu-latest
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      majorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}
+      assemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}
+      informationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for GitVersion
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.10.2
+        with:
+          versionSpec: "5.x"
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.10.2
+        with:
+          useConfigFile: true
+
+      - name: Display GitVersion outputs
+        run: |
+          Write-Host "Release Version Information:"
+          Write-Host "  SemVer: ${{ steps.gitversion.outputs.semVer }}"
+          Write-Host "  MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
+          Write-Host "  AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
+          Write-Host "  InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
+          Write-Host "  Tag: ${{ github.ref_name }}"
+        shell: pwsh
+
+  # Build, test, and package
+  build-and-package:
+    name: build-and-package
+    runs-on: ubuntu-latest
+    needs: version-check
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.10.2
+        with:
+          versionSpec: "5.x"
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.10.2
+        with:
+          useConfigFile: true
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore src/Ormico.DbPatchManager.sln
+        shell: pwsh
+
+      - name: Build application
+        run: |
+          dotnet build src/Ormico.DbPatchManager.sln `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-restore `
+            -p:Version=${{ steps.gitversion.outputs.semVer }} `
+            -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} `
+            -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} `
+            -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
+        shell: pwsh
+
+      - name: Run unit tests
+        run: |
+          dotnet test src/Ormico.DbPatchManager.sln `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-build `
+            --verbosity normal `
+            --logger trx `
+            --results-directory TestResults `
+            --collect:"XPlat Code Coverage"
+        shell: pwsh
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            TestResults/**/*.trx
+          check_name: "Release Test Results"
+          comment_title: "Release Test Results"
+          fail_on: "test failures"
+
+      - name: Create CLI artifact package
+        shell: pwsh
+        run: |
+          $version = "${{ steps.gitversion.outputs.semVer }}"
+          $artifactName = "dbpatch-manager-cli-$version"
+          $cliPath = "src/Ormico.DbPatchManager.CLI/bin/${{ env.BUILD_CONFIGURATION }}/net8.0"
+
+          Write-Host "Creating release package for version $version"
+
+          # Create artifact directory
+          New-Item -ItemType Directory -Path "artifacts" -Force
+
+          # Copy CLI files to staging
+          $stagingPath = "artifacts/staging"
+          New-Item -ItemType Directory -Path $stagingPath -Force
+
+          # Copy all CLI output files
+          Copy-Item -Path "$cliPath/*" -Destination $stagingPath -Recurse -Force
+
+          # Ensure script files have correct line endings and permissions
+          if (Test-Path "$stagingPath/dbpatch") {
+              # Convert to Unix line endings for the shell script
+              $content = Get-Content "$stagingPath/dbpatch" -Raw
+              $content = $content -replace "`r`n", "`n"
+              Set-Content "$stagingPath/dbpatch" -Value $content -NoNewline
+          }
+
+          # Create versioned zip archive
+          Compress-Archive -Path "$stagingPath/*" -DestinationPath "artifacts/$artifactName.zip" -Force
+          Write-Host "✅ Created versioned CLI artifact: artifacts/$artifactName.zip"
+
+          # Create unversioned dbpatch.zip for install-dbpatch.sh script compatibility
+          Compress-Archive -Path "$stagingPath/*" -DestinationPath "artifacts/dbpatch.zip" -Force
+          Write-Host "✅ Created unversioned CLI artifact: artifacts/dbpatch.zip (for install script)"
+
+          # List contents for verification
+          Get-ChildItem "artifacts/*.zip" | ForEach-Object {
+              Write-Host "  - $($_.Name) ($($_.Length) bytes)"
+          }
+
+      - name: Copy install script to artifacts
+        shell: pwsh
+        run: |
+          # Copy the install script to artifacts for release
+          Copy-Item "src/install-dbpatch.sh" "artifacts/install-dbpatch.sh"
+          Write-Host "✅ Copied install-dbpatch.sh to artifacts"
+
+      - name: Create NuGet package
+        run: |
+          $version = "${{ steps.gitversion.outputs.semVer }}"
+          Write-Host "Creating NuGet package with version: $version"
+
+          dotnet pack src/Ormico.DbPatchManager.Common/Ormico.DbPatchManager.Common.csproj `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-build `
+            -p:Version=$version `
+            -p:PackageVersion=$version `
+            --output artifacts/
+
+          Write-Host "✅ NuGet package created"
+        shell: pwsh
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.version-check.outputs.semVer }}
+          path: |
+            artifacts/*.zip
+            artifacts/*.nupkg
+          retention-days: 90
+
+  # Create GitHub Release
+  create-release:
+    name: create-release
+    runs-on: ubuntu-latest
+    needs: [version-check, build-and-package]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.version-check.outputs.semVer }}
+          path: artifacts/
+
+      - name: Generate release notes
+        id: release-notes
+        shell: pwsh
+        run: |
+          $version = "${{ needs.version-check.outputs.semVer }}"
+          $tag = "${{ github.ref_name }}"
+
+          Write-Host "Generating release notes for $tag"
+
+          # Get the previous tag
+          $previousTag = git describe --tags --abbrev=0 "$tag^" 2>$null
+          if ($LASTEXITCODE -ne 0) {
+              Write-Host "No previous tag found, this is the first release"
+              $previousTag = ""
+          }
+
+          # Generate commit log
+          if ($previousTag) {
+              Write-Host "Changes since $previousTag"
+              $commitLog = git log --pretty=format:"- %s (%h)" "$previousTag..$tag"
+          } else {
+              Write-Host "Initial release - showing last 10 commits"
+              $commitLog = git log --pretty=format:"- %s (%h)" -n 10
+          }
+
+          # Create release notes
+          $releaseNotes = @"
+          ## DbPatchManager $version
+
+          ### Installation
+
+          **Windows:**
+          1. Download ``dbpatch-manager-cli-$version.zip``
+          2. Unblock the zip file (Properties → Unblock)
+          3. Extract to your preferred location
+          4. Add the folder to your PATH
+
+          **Linux (Automated):**
+          ``````bash
+          wget -qO- https://github.com/${{ github.repository }}/releases/latest/download/install-dbpatch.sh | bash
+          ``````
+
+          **Linux (Manual):**
+          ``````bash
+          wget https://github.com/${{ github.repository }}/releases/download/$tag/dbpatch.zip
+          unzip dbpatch.zip -d /usr/local/lib/dbpatch
+          chmod +x /usr/local/lib/dbpatch/dbpatch
+          ln -s /usr/local/lib/dbpatch/dbpatch /usr/local/bin/dbpatch
+          ``````
+
+          ### NuGet Package
+
+          ``````bash
+          dotnet add package Ormico.DbPatchManager.Common --version $version
+          ``````
+
+          ### Changes
+
+          $commitLog
+
+          ### Requirements
+
+          - .NET 8.0 Runtime
+
+          "@
+
+          # Save to file
+          $releaseNotes | Out-File -FilePath "release-notes.md" -Encoding utf8
+
+          Write-Host "Release notes generated"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: DbPatchManager ${{ needs.version-check.outputs.semVer }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/*.zip
+            artifacts/*.nupkg
+            artifacts/install-dbpatch.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Display release information
+        run: |
+          Write-Host "✅ Release created successfully!"
+          Write-Host ""
+          Write-Host "Release: ${{ github.ref_name }}"
+          Write-Host "Version: ${{ needs.version-check.outputs.semVer }}"
+          Write-Host "URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+          Write-Host ""
+          Write-Host "Artifacts:"
+          Get-ChildItem artifacts/ | ForEach-Object {
+              Write-Host "  - $($_.Name)"
+          }
+        shell: pwsh
+
+  # Publish to NuGet (optional - requires NUGET_API_KEY secret)
+  publish-nuget:
+    name: publish-nuget
+    runs-on: ubuntu-latest
+    needs: [version-check, build-and-package, create-release]
+    if: ${{ vars.PUBLISH_TO_NUGET == 'true' }}  # Only run if repository variable is set
+    steps:
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts-${{ needs.version-check.outputs.semVer }}
+          path: artifacts/
+
+      - name: Publish to NuGet
+        shell: pwsh
+        run: |
+          $version = "${{ needs.version-check.outputs.semVer }}"
+          $nupkgFile = "artifacts/Ormico.DbPatchManager.Common.$version.nupkg"
+
+          if (-not (Test-Path $nupkgFile)) {
+              Write-Error "NuGet package not found: $nupkgFile"
+              exit 1
+          }
+
+          Write-Host "Publishing $nupkgFile to NuGet.org..."
+
+          dotnet nuget push $nupkgFile `
+            --api-key ${{ secrets.NUGET_API_KEY }} `
+            --source https://api.nuget.org/v3/index.json `
+            --skip-duplicate
+
+          Write-Host "✅ NuGet package published successfully!"
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+
+  # Release summary
+  release-summary:
+    name: release-summary
+    runs-on: ubuntu-latest
+    needs: [version-check, build-and-package, create-release]
+    if: always()
+    permissions:
+      issues: write
+    steps:
+      - name: Determine overall result
+        id: check-results
+        run: |
+          $buildResult = "${{ needs.build-and-package.result }}"
+          $releaseResult = "${{ needs.create-release.result }}"
+
+          Write-Host "Release Build Results:"
+          Write-Host "  Build & Package: $buildResult"
+          Write-Host "  Create Release: $releaseResult"
+
+          if ($buildResult -ne "success" -or $releaseResult -ne "success") {
+              Write-Host "❌ Release failed"
+              "failed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+              exit 1
+          }
+
+          Write-Host ""
+          Write-Host "✅ Release ${{ needs.version-check.outputs.semVer }} completed successfully!"
+          Write-Host ""
+          Write-Host "View release: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+          "failed=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+        shell: pwsh
+        continue-on-error: true
+
+      - name: Create issue on failure
+        if: steps.check-results.outputs.failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const buildResult = "${{ needs.build-and-package.result }}";
+            const releaseResult = "${{ needs.create-release.result }}";
+            const runUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            const tag = "${{ github.ref_name }}";
+            const version = "${{ needs.version-check.outputs.semVer }}";
+
+            const issueTitle = `🚨 Release Failed - ${tag}`;
+            const issueBody = `## 🚨 Release Build Failure
+
+            The release build for **${tag}** has failed and requires immediate attention.
+
+            ### Failure Details
+            - **Tag:** \`${tag}\`
+            - **Version:** ${version}
+            - **Workflow Run:** [View Details](${runUrl})
+            - **Triggered by:** @${{ github.actor }}
+            - **Timestamp:** ${new Date().toISOString()}
+
+            ### Job Results
+            | Job | Status |
+            |-----|--------|
+            | Build & Package | ${buildResult === 'success' ? '✅ Passed' : '❌ Failed'} |
+            | Create Release | ${releaseResult === 'success' ? '✅ Passed' : '❌ Failed'} |
+
+            ### Action Required
+            **URGENT:** The release process has failed. No release has been published.
+
+            1. Review the workflow logs: ${runUrl}
+            2. Fix any issues
+            3. Delete the failed tag if needed: \`git push --delete origin ${tag}\`
+            4. Re-tag and push to retry the release
+
+            ### Next Steps
+            \`\`\`bash
+            # Fix issues, then re-release:
+            git tag -d ${tag}
+            git push --delete origin ${tag}
+            # Make necessary fixes
+            git tag ${tag}
+            git push origin ${tag}
+            \`\`\`
+            `;
+
+            // Check if any open release-failure issue exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'release-failure',
+              state: 'open'
+            });
+
+            // Find existing issue for release failures
+            const existingIssue = issues.data.find(issue =>
+              issue.labels.some(label => label.name === 'release-failure')
+            );
+
+            if (existingIssue) {
+              console.log(`Found existing issue: #${existingIssue.number}`);
+
+              // Add comment with new failure details
+              const commentBody = `### 🔴 Additional Release Failure
+
+            **New failure detected for tag release:**
+            - **Tag:** ${tag}
+            - **Commit:** [${commit}](${commitUrl})
+            - **Workflow Run:** [View Details](${runUrl})
+            - **Triggered by:** @${{ github.actor }}
+            - **Timestamp:** ${new Date().toISOString()}
+
+            | Job | Status |
+            |-----|--------|
+            | Build & Test | ${buildResult === 'success' ? '✅ Passed' : '❌ Failed'} |
+            | Create Release | ${releaseResult === 'success' ? '✅ Passed' : '❌ Failed'} |
+
+            **To fix and retry:**
+            \`\`\`bash
+            # Delete the failed tag
+            git push --delete origin ${tag}
+            # Make necessary fixes
+            git tag ${tag}
+            git push origin ${tag}
+            \`\`\`
+            `;
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: commentBody
+              });
+              console.log(`Added comment to issue #${existingIssue.number}`);
+            } else {
+              // No open issue exists, create new one
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: issueBody,
+                labels: ['release-failure', 'bug', 'priority-high']
+              });
+              console.log(`Created new issue #${issue.data.number}`);
+            }
+
+      # Slack notification on failure
+      - name: Send Slack failure notification
+        if: failure()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          payload: |
+            {
+              "text": "🔴 Release Build Failed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🔴 Release Build Failed",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Repository:*\n${{ github.repository }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Tag:*\n${{ github.ref_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n<${{ github.event.head_commit.url }}|${{ github.sha }}>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Triggered by:*\n${{ github.actor }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "❌ The release build has failed. Please check the workflow run for details."
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Workflow Run"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                      "style": "danger"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      # Slack notification on success
+      - name: Send Slack success notification
+        if: success()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          payload: |
+            {
+              "text": "✅ Release Published Successfully",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ Release Published Successfully",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Repository:*\n${{ github.repository }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Version:*\n${{ steps.gitversion.outputs.semVer }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Tag:*\n${{ github.ref_name }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Released by:*\n${{ github.actor }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🎉 A new release has been published and is ready for deployment!"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Release"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}",
+                      "style": "primary"
+                    },
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Workflow Run"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

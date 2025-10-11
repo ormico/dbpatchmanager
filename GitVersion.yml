@@ -1,4 +1,9 @@
-mode: Mainline
+mode: ContinuousDelivery
+strategies:
+  - Mainline
+  - ConfiguredNextVersion
+  - TaggedCommit
+
 branches:
   main:
     regex: ^main$

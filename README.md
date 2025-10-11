@@ -1,5 +1,10 @@
 ![rect-logo-small](https://user-images.githubusercontent.com/1731364/110421365-60dec400-806b-11eb-9a53-d783ca935042.png)
 # DB Patch Manager
+
+[![Main Build](https://github.com/ormico/dbpatchmanager/actions/workflows/main-build.yml/badge.svg)](https://github.com/ormico/dbpatchmanager/actions/workflows/main-build.yml)
+[![PR Build](https://github.com/ormico/dbpatchmanager/actions/workflows/pr-build.yml/badge.svg)](https://github.com/ormico/dbpatchmanager/actions/workflows/pr-build.yml)
+[![CodeQL](https://github.com/ormico/dbpatchmanager/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/ormico/dbpatchmanager/actions/workflows/codeql-analysis.yml)
+
 Database development tool for change control.
 
 v2 has been updated to .NET Core for cross platform support.
