@@ -238,22 +238,12 @@ jobs:
           }
 
           if ($formatExitCode -eq 0) {
-            Write-Host "No formatting changes needed"
+            Write-Host "✅ No formatting changes needed"
             "has-issues=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           } else {
-            Write-Host "Code formatting issues found"
+            Write-Host "❌ Code formatting issues found"
             "has-issues=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-
-            # Run format to see what would change (for reporting purposes)
-            Write-Host "Getting diff for reporting..."
-            dotnet format src/Ormico.DbPatchManager.sln --verbosity diagnostic
-
-            # Show what files would be changed
-            Write-Host "Files that need formatting:"
-            git diff --name-only
-
-            # Reset changes since we're only checking
-            git checkout -- .
+            exit 1
           }
         shell: pwsh
 
