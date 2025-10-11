@@ -201,7 +201,9 @@ git commit -m "docs: fix markdown linting issues"
 
 ## What I Recommend
 
-**For now**: Run the auto-fix command. It will handle ~80% of the issues automatically (spacing, blank lines, etc.). Then manually review the remaining issues like line length violations.
+**For now**: Run the auto-fix command. It will handle ~80% of the issues
+automatically (spacing, blank lines, etc.). Then manually review the
+remaining issues like line length violations.
 
 ```bash
 markdownlint --config .GitHub/linters/.markdownlint.json --fix '**/*.md' --ignore node_modules

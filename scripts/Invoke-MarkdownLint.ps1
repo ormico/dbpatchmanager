@@ -165,14 +165,14 @@ try {
         Write-Host "✓ Markdown linting completed successfully!" -ForegroundColor Green
         Write-Host "=====================================" -ForegroundColor Green
         Write-Host ""
-        
+
         if ($Fix) {
             Write-Host "Files have been automatically fixed." -ForegroundColor Green
             Write-Host "Review changes with: git diff" -ForegroundColor Yellow
         } else {
             Write-Host "No issues found! All markdown files are compliant." -ForegroundColor Green
         }
-        
+
         exit 0
     } else {
         Write-Host ""
@@ -180,7 +180,7 @@ try {
         Write-Host "⚠ Markdown linting found issues" -ForegroundColor Yellow
         Write-Host "=====================================" -ForegroundColor Yellow
         Write-Host ""
-        
+
         if (-not $Fix) {
             Write-Host "To automatically fix issues, run:" -ForegroundColor Cyan
             Write-Host "  .\scripts\Invoke-MarkdownLint.ps1 -Fix" -ForegroundColor White
@@ -191,11 +191,11 @@ try {
             Write-Host "Some issues could not be auto-fixed." -ForegroundColor Yellow
             Write-Host "Please review the output above and fix manually." -ForegroundColor Yellow
         }
-        
+
         Write-Host ""
         Write-Host "For detailed report, see: docs/MARKDOWN-LINT-REPORT.md" -ForegroundColor Cyan
         Write-Host ""
-        
+
         exit 1
     }
 

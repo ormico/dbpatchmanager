@@ -6,8 +6,10 @@ This guide will help you set up Slack notifications for your CI/CD workflows.
 
 The following workflows will send Slack notifications:
 
-- **Main Build (`main-build.yml`)**: Sends notification on **failure** only
-- **Release Build (`release-build.yml`)**: Sends notifications on both **failure** and **success**
+- **Main Build (`main-build.yml`)**: Sends notification on **failure**
+  only
+- **Release Build (`release-build.yml`)**: Sends notifications on both
+  **failure** and **success**
 
 ## Prerequisites
 
@@ -168,9 +170,11 @@ To send notifications to different channels for different workflows:
 Edit the `payload` section in the workflow files:
 
 - **Main Build:** `.GitHub/workflows/main-build.yml` (line ~330)
-- **Release Build:** `.GitHub/workflows/release-build.yml` (line ~497 and ~562)
+- **Release Build:** `.GitHub/workflows/release-build.yml` (line ~497 and
+  ~562)
 
-Use [Slack Block Kit Builder](https://app.slack.com/block-kit-builder) to design custom messages.
+Use [Slack Block Kit Builder](https://app.slack.com/block-kit-builder)
+to design custom messages.
 
 ### Add Mentions
 

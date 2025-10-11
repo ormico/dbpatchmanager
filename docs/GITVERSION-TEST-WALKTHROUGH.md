@@ -1,6 +1,7 @@
 # GitVersion CI/CD Test Walkthrough
 
-This document provides a step-by-step walkthrough to verify that the GitVersion integration is working correctly in all workflows.
+This document provides a step-by-step walkthrough to verify that the
+GitVersion integration is working correctly in all workflows.
 
 ## 📋 Prerequisites
 
@@ -172,8 +173,10 @@ PreReleaseTag: alpha.X
 
 **Troubleshooting:**
 
-- If version shows `0.0.1`: The initial tag (v2.2.1) may not be visible. Ensure it was pushed.
-- If "fetch-depth: 0" error: Workflow needs full history, check checkout action.
+- If version shows `0.0.1`: The initial tag (v2.2.1) may not be visible.
+  Ensure it was pushed.
+- If "fetch-depth: 0" error: Workflow needs full history, check checkout
+  action.
 
 ---
 
@@ -240,8 +243,10 @@ GitVersion executed successfully
 
 **Troubleshooting:**
 
-- If version validation fails: This is now handled by GitVersion, not manual validation
-- If build fails with version error: Check that GitVersion outputs are correctly referenced
+- If version validation fails: This is now handled by GitVersion, not
+  manual validation
+- If build fails with version error: Check that GitVersion outputs are
+  correctly referenced
 
 ---
 

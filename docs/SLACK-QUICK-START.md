@@ -28,7 +28,8 @@ Add these to **Settings → Secrets and variables → Actions**:
 
 ### 4. Get Channel ID
 
-→ Open Slack channel → Click channel name → Copy **Channel ID** from bottom of About tab
+→ Open Slack channel → Click channel name → Copy **Channel ID** from
+bottom of About tab
 
 ### 5. Add to GitHub
 
