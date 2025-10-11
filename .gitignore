@@ -1,18 +1,4 @@
-src/.vs/
 temp/
-src2/
-src/packages/
-*.user
-src/Ormico.DbPatchManager.CLI/bin/*
-src/Ormico.DbPatchManager.Cmd/obj/*
-src/Ormico.DbPatchManager.SqlServer/bin/*
-src/Ormico.DbPatchManager.SqlServer/obj/*
-src/Ormico.DbPatchManager/bin/*
-src/Ormico.DbPatchManager/obj/*
-bin
-obj
-
-src/Ormico.DbPatchManager.CLI/deb/
 
 # Local development files (session notes, drafts, personal docs)
 .local/
