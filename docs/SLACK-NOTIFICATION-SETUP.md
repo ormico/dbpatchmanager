@@ -38,6 +38,7 @@ The following workflows will send Slack notifications:
 ## Step 3: Get Your Slack Channel ID
 
 ### Method 1: Via Slack Desktop/Web App
+
 1. Open your Slack workspace
 2. Navigate to the channel where you want notifications
 3. Click the channel name at the top
@@ -45,7 +46,8 @@ The following workflows will send Slack notifications:
 5. Copy the **Channel ID** (e.g., `C01234567AB`)
 
 ### Method 2: Via Slack API
-1. Go to https://api.slack.com/methods/conversations.list/test
+
+1. Go to <https://api.slack.com/methods/conversations.list/test>
 2. Select your app token
 3. Click **"Test Method"**
 4. Find your channel in the JSON response
@@ -59,12 +61,14 @@ The following workflows will send Slack notifications:
 4. Add two secrets:
 
 ### Secret 1: SLACK_BOT_TOKEN
+
 - **Name:** `SLACK_BOT_TOKEN`
 - **Value:** Your Bot User OAuth Token (from Step 2)
   - Should start with `xoxb-`
   - Example: `xoxb-XXXXXXXXXX-XXXXXXXXXXXXX-XXXXXXXXXXXXXXXXXXXXXXXX`
 
 ### Secret 2: SLACK_CHANNEL_ID
+
 - **Name:** `SLACK_CHANNEL_ID`
 - **Value:** Your Channel ID (from Step 3)
   - Example: `C01234567AB`
@@ -154,6 +158,7 @@ To send notifications to different channels for different workflows:
    - `SLACK_CHANNEL_ID_BUILDS`
 
 2. Update workflow files to use the appropriate secret:
+
    ```yaml
    channel-id: ${{ secrets.SLACK_CHANNEL_ID_RELEASES }}
    ```
@@ -162,8 +167,8 @@ To send notifications to different channels for different workflows:
 
 Edit the `payload` section in the workflow files:
 
-- **Main Build:** `.github/workflows/main-build.yml` (line ~330)
-- **Release Build:** `.github/workflows/release-build.yml` (line ~497 and ~562)
+- **Main Build:** `.GitHub/workflows/main-build.yml` (line ~330)
+- **Release Build:** `.GitHub/workflows/release-build.yml` (line ~497 and ~562)
 
 Use [Slack Block Kit Builder](https://app.slack.com/block-kit-builder) to design custom messages.
 

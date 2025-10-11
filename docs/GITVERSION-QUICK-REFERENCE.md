@@ -3,11 +3,13 @@
 ## 🚀 Quick Start
 
 ### Install GitVersion Locally
+
 ```bash
 dotnet tool install --global GitVersion.Tool
 ```
 
 ### Check Your Current Version
+
 ```bash
 # In your repository
 dotnet-gitversion
@@ -62,6 +64,7 @@ InformationalVersion:      1.2.3-alpha.4+...    # Use for: Detailed build info
 ## 🎯 Common Workflows
 
 ### Creating a Feature
+
 ```bash
 # Create feature branch
 git checkout -b feature/my-feature
@@ -78,6 +81,7 @@ git push origin feature/my-feature
 ```
 
 ### Creating a Hotfix
+
 ```bash
 # Create hotfix branch from main
 git checkout main
@@ -91,6 +95,7 @@ git push origin hotfix/critical-bug
 ```
 
 ### Creating a Release
+
 ```bash
 # Create release branch
 git checkout -b release/2024-10-05-01
@@ -105,11 +110,13 @@ git push origin release/2024-10-05-01
 ## 🏷️ Working with Tags
 
 ### View Current Tags
+
 ```bash
 git tag -l
 ```
 
 ### Create Initial Version Tag
+
 ```bash
 # Set the baseline version
 git tag v1.1.4
@@ -117,6 +124,7 @@ git push origin v1.1.4
 ```
 
 ### Create Release Tag
+
 ```bash
 # After merging to main
 git tag v1.2.0
@@ -126,6 +134,7 @@ git push origin v1.2.0
 ## 🔍 Troubleshooting
 
 ### Check What Version Will Be Generated
+
 ```bash
 # Show all version variables
 dotnet-gitversion
@@ -136,6 +145,7 @@ dotnet-gitversion /showvariable MajorMinorPatch
 ```
 
 ### Debug Version Calculation
+
 ```bash
 # Show detailed diagnostics
 dotnet-gitversion /diag
@@ -147,12 +157,14 @@ dotnet-gitversion /showconfig
 ### Common Issues
 
 **"Cannot find the commit"**
+
 ```bash
 # Ensure you have full history
 git fetch --unshallow
 ```
 
 **"No version found"**
+
 ```bash
 # Create an initial tag
 git tag v1.0.0
@@ -160,6 +172,7 @@ git push origin v1.0.0
 ```
 
 **"Wrong version calculated"**
+
 ```bash
 # Check your branch name matches patterns
 # feature/*, release/*, hotfix/*
@@ -168,6 +181,7 @@ git push origin v1.0.0
 ## 📖 Examples
 
 ### Example 1: Feature Development
+
 ```bash
 # Current main version: 1.2.3
 git checkout -b feature/user-auth
@@ -181,6 +195,7 @@ git commit -m "Add authentication logic +semver: minor"
 ```
 
 ### Example 2: Hotfix
+
 ```bash
 # Current main version: 1.2.3
 git checkout -b hotfix/security-fix
@@ -191,6 +206,7 @@ git commit -m "Fix XSS vulnerability +semver: patch"
 ```
 
 ### Example 3: Multiple Features
+
 ```bash
 # Feature A (adds minor feature)
 git commit -m "Feature A +semver: minor"  # 1.3.0
@@ -205,6 +221,7 @@ git commit -m "Feature C +semver: patch"  # 1.4.1
 ## 🛠️ Local Development
 
 ### Test Version Before Pushing
+
 ```bash
 # Make your commits
 git commit -m "My changes +semver: minor"
@@ -217,14 +234,16 @@ git commit --amend -m "My changes +semver: patch"
 ```
 
 ### Preview in CI/CD
+
 All GitHub Actions workflows now show version in logs:
+
 1. Push your branch
 2. Check Actions tab
 3. Look for "Display GitVersion outputs" step
 
 ## 📚 Learn More
 
-- **GitVersion Docs**: https://gitversion.net/docs/
+- **GitVersion Docs**: <https://gitversion.net/docs/>
 - **Configuration**: See `GitVersion.yml` in repo root
 - **Migration Guide**: See `GITVERSION-MIGRATION.md`
 - **Full Summary**: See `GITVERSION-CONVERSION-SUMMARY.md`

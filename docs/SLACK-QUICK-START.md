@@ -12,20 +12,26 @@ Add these to **Settings → Secrets and variables → Actions**:
 ## Quick Setup (5 Minutes)
 
 ### 1. Create Slack App
-→ https://api.slack.com/apps → **Create New App** → **From scratch**
+
+→ <https://api.slack.com/apps> → **Create New App** → **From scratch**
 
 ### 2. Add Permissions
+
 → **OAuth & Permissions** → **Bot Token Scopes** → Add:
+
 - `chat:write`
 - `chat:write.public`
 
 ### 3. Install to Workspace
+
 → **Install to Workspace** → Copy **Bot User OAuth Token**
 
 ### 4. Get Channel ID
+
 → Open Slack channel → Click channel name → Copy **Channel ID** from bottom of About tab
 
 ### 5. Add to GitHub
+
 → Repository **Settings** → **Secrets and variables** → **Actions** → Add both secrets
 
 ✅ Done! Workflows will now send Slack notifications.

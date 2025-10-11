@@ -5,6 +5,7 @@ This document provides a step-by-step walkthrough to verify that the GitVersion 
 ## 📋 Prerequisites
 
 Before starting these tests, ensure:
+
 - [ ] You're on the `feature/convert-to-gitversion` branch
 - [ ] All workflow files have been updated
 - [ ] You have push access to the repository
@@ -13,6 +14,7 @@ Before starting these tests, ensure:
 ## 🎯 Test Overview
 
 We'll test the following scenarios:
+
 1. ✅ Initial version tag creation
 2. ✅ Feature branch versioning (alpha versions)
 3. ✅ Pull Request build with GitVersion
@@ -27,15 +29,17 @@ We'll test the following scenarios:
 **Purpose**: Ensure GitVersion files are in place
 
 **Steps:**
+
 ```bash
 # Check that GitVersion.yml exists
 ls GitVersion.yml
 
 # Check that workflows have been updated
-git diff origin/main .github/workflows/
+git diff origin/main .GitHub/workflows/
 ```
 
 **Expected Result:**
+
 - ✅ `GitVersion.yml` file exists in repository root
 - ✅ Workflow files show GitVersion actions instead of version-management.ps1
 
@@ -46,6 +50,7 @@ git diff origin/main .github/workflows/
 **Purpose**: Establish baseline version for GitVersion
 
 **Steps:**
+
 ```bash
 # Ensure you're on the feature branch
 git checkout feature/convert-to-gitversion
@@ -56,10 +61,12 @@ git push origin v2.2.1
 ```
 
 **Expected Result:**
+
 - ✅ Tag created successfully
 - ✅ Tag visible on GitHub: `https://github.com/ormico/github-actions-ci-template/tags`
 
 **Verification:**
+
 ```bash
 # List tags
 git tag -l
@@ -74,12 +81,14 @@ git tag -l
 **Purpose**: Verify GitVersion calculates versions correctly
 
 **Prerequisites:**
+
 ```bash
 # Install GitVersion tool
 dotnet tool install --global GitVersion.Tool
 ```
 
 **Steps:**
+
 ```bash
 # Run GitVersion on current branch
 dotnet-gitversion
@@ -90,11 +99,13 @@ dotnet-gitversion /showvariable MajorMinorPatch
 ```
 
 **Expected Result:**
+
 - ✅ GitVersion outputs version information
 - ✅ SemVer shows something like `2.2.1-alpha.X` (since you're on feature branch)
 - ✅ MajorMinorPatch shows `2.2.1`
 
 **Sample Output:**
+
 ```json
 {
   "Major": 1,
@@ -115,6 +126,7 @@ dotnet-gitversion /showvariable MajorMinorPatch
 **Steps:**
 
 1. **Ensure you're on feature branch and push latest changes:**
+
    ```bash
    git checkout feature/convert-to-gitversion
    git push origin feature/convert-to-gitversion
@@ -134,10 +146,12 @@ dotnet-gitversion /showvariable MajorMinorPatch
 **Expected Results:**
 
 ✅ **In the "Determine Version" step:**
+
 - GitVersion action runs successfully
 - No errors about missing history
 
 ✅ **In the "Display GitVersion outputs" step:**
+
 ```
 SemVer: 2.2.1-alpha.X
 MajorMinorPatch: 2.2.1
@@ -148,13 +162,16 @@ PreReleaseTag: alpha.X
 ```
 
 ✅ **In the "Build application" step:**
+
 - Build succeeds with version properties set
 
 ✅ **If preview release was selected:**
+
 - Docker image is built and pushed with alpha version tag
 - Artifacts are uploaded
 
 **Troubleshooting:**
+
 - If version shows `0.0.1`: The initial tag (v2.2.1) may not be visible. Ensure it was pushed.
 - If "fetch-depth: 0" error: Workflow needs full history, check checkout action.
 
@@ -188,21 +205,25 @@ PreReleaseTag: alpha.X
 **Expected Results:**
 
 ✅ **Version Check Job:**
+
 ```
 SemVer: 1.1.5 (or 1.2.0 depending on commits with +semver: keywords)
 MajorMinorPatch: 1.1.5
 ```
 
 ✅ **Build and Test Job:**
+
 - Uses GitVersion outputs
 - Build succeeds with proper version properties
 - Tests run successfully
 
 ✅ **Docker Build Job:**
+
 - Docker image builds with GitVersion tag
 - No push (PR builds don't push)
 
 ✅ **PR Summary Comment:**
+
 - Comment posted to PR with build status
 - All checks should be green
 
@@ -218,6 +239,7 @@ GitVersion executed successfully
 ```
 
 **Troubleshooting:**
+
 - If version validation fails: This is now handled by GitVersion, not manual validation
 - If build fails with version error: Check that GitVersion outputs are correctly referenced
 
@@ -230,6 +252,7 @@ GitVersion executed successfully
 **Steps:**
 
 1. **Make a commit with explicit version control:**
+
    ```bash
    # On your feature branch
    git checkout feature/convert-to-gitversion
@@ -245,6 +268,7 @@ GitVersion executed successfully
    ```
 
 2. **Check version calculation locally:**
+
    ```bash
    dotnet-gitversion /showvariable SemVer
    ```
@@ -256,15 +280,19 @@ GitVersion executed successfully
 **Expected Results:**
 
 ✅ **Before keyword commit:**
+
 - Version: `2.2.1-alpha.X`
 
 ✅ **After `+semver: minor` commit:**
+
 - Version: `1.2.0-alpha.X` (minor incremented)
 
 ✅ **With `+semver: patch`:**
+
 - Version: `1.1.5-alpha.X` (patch incremented)
 
 ✅ **With `+semver: major`:**
+
 - Version: `2.0.0-alpha.X` (major incremented)
 
 ---
@@ -284,6 +312,7 @@ GitVersion executed successfully
    - Confirm merge
 
 3. **Check main branch version:**
+
    ```bash
    # Switch to main
    git checkout main
@@ -296,11 +325,13 @@ GitVersion executed successfully
 **Expected Results:**
 
 ✅ **Main branch version:**
+
 - Clean semantic version: `1.1.5` (or `1.2.0` if minor increment was used)
 - **No** `-alpha` suffix
 - **No** pre-release tag
 
 ✅ **Future commits on main:**
+
 - Each commit increments patch version by default
 - Use `+semver:` keywords for minor/major increments
 
@@ -313,6 +344,7 @@ GitVersion executed successfully
 **Steps:**
 
 1. **Create release branch from main:**
+
    ```bash
    git checkout main
    git pull origin main
@@ -331,15 +363,18 @@ GitVersion executed successfully
 **Expected Results:**
 
 ✅ **Release branch version:**
+
 - Beta version: `1.1.5-beta.1` (or `1.2.0-beta.1`)
 - Version increments with each commit on release branch
 
 ✅ **Docker images created with:**
+
 - Version tag: `1.1.5-beta.1`
 - Release tag: `v1.1.5`
 - Latest tag: `latest`
 
 ✅ **GitHub Release created:**
+
 - Release notes generated
 - Artifacts attached
 
@@ -352,6 +387,7 @@ GitVersion executed successfully
 **Steps:**
 
 1. **Create hotfix branch:**
+
    ```bash
    git checkout main
    git checkout -b hotfix/critical-fix
@@ -372,10 +408,12 @@ GitVersion executed successfully
 **Expected Results:**
 
 ✅ **Hotfix branch version:**
+
 - Beta during development: `1.1.6-beta.1`
 - Patch increment from main version
 
 ✅ **After merge to main:**
+
 - Stable version: `1.1.6`
 - No beta suffix
 
@@ -408,31 +446,39 @@ After all tests, you should see these version patterns:
 ## 🔍 Common Issues and Solutions
 
 ### Issue 1: Version shows 0.0.1
+
 **Cause**: No version tag found in repository
-**Solution**: 
+**Solution**:
+
 ```bash
 git tag v2.2.1
 git push origin v2.2.1
 ```
 
 ### Issue 2: GitVersion action fails with "Cannot find commit"
+
 **Cause**: Shallow clone (not enough history)
 **Solution**: Ensure workflow uses `fetch-depth: 0` in checkout action
 
 ### Issue 3: Wrong version calculated
+
 **Cause**: Branch name doesn't match patterns in GitVersion.yml
 **Solution**: Ensure branch follows pattern:
+
 - `feature/*` for features
 - `release/*` for releases
 - `hotfix/*` for hotfixes
 
 ### Issue 4: Build fails with "version property not found"
+
 **Cause**: Workflow references old version output variable
 **Solution**: Ensure workflow uses GitVersion outputs:
+
 - `steps.gitversion.outputs.semVer`
 - `steps.gitversion.outputs.majorMinorPatch`
 
 ### Issue 5: No pre-release tag on feature branch
+
 **Cause**: GitVersion configuration issue
 **Solution**: Verify `GitVersion.yml` has correct branch configuration
 
@@ -441,18 +487,21 @@ git push origin v2.2.1
 Use this section to record your test results:
 
 ### Test 1: Initial Version Tag
+
 - Date/Time: _______________
 - Tag Created: _______________
 - Result: ☐ Pass ☐ Fail
 - Notes: _______________
 
 ### Test 2: Local GitVersion
+
 - Date/Time: _______________
 - Version Calculated: _______________
 - Result: ☐ Pass ☐ Fail
 - Notes: _______________
 
 ### Test 3: Feature Branch Workflow
+
 - Date/Time: _______________
 - Workflow Run ID: _______________
 - Version Produced: _______________
@@ -460,6 +509,7 @@ Use this section to record your test results:
 - Notes: _______________
 
 ### Test 4: PR Build
+
 - Date/Time: _______________
 - PR Number: _______________
 - Version Calculated: _______________
@@ -467,6 +517,7 @@ Use this section to record your test results:
 - Notes: _______________
 
 ### Test 5: Commit Keywords
+
 - Date/Time: _______________
 - Keyword Used: _______________
 - Version Before: _______________
@@ -475,18 +526,21 @@ Use this section to record your test results:
 - Notes: _______________
 
 ### Test 6: Merge to Main
+
 - Date/Time: _______________
 - Final Main Version: _______________
 - Result: ☐ Pass ☐ Fail
 - Notes: _______________
 
 ### Test 7: Release Branch (Optional)
+
 - Date/Time: _______________
 - Release Version: _______________
 - Result: ☐ Pass ☐ Fail
 - Notes: _______________
 
 ### Test 8: Hotfix Branch (Optional)
+
 - Date/Time: _______________
 - Hotfix Version: _______________
 - Result: ☐ Pass ☐ Fail
@@ -516,6 +570,7 @@ After successful testing:
 ## 🆘 Getting Help
 
 If tests fail:
+
 1. Check GitHub Actions logs for specific errors
 2. Run `dotnet-gitversion /diag` locally for diagnostics
 3. Review `GitVersion.yml` configuration
