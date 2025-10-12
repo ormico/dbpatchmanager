@@ -15,40 +15,9 @@ env:
   BUILD_CONFIGURATION: "Release"
 
 jobs:
-  # Job to calculate version using GitVersion
+  # Job to calculate version using GitVersion (reusable workflow)
   version-check:
-    name: version-check
-    runs-on: ubuntu-latest
-    outputs:
-      semVer: ${{ steps.gitversion.outputs.semVer }}
-      majorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}
-      assemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}
-      informationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Required for GitVersion
-
-      - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v0.10.2
-        with:
-          versionSpec: "5.x"
-
-      - name: Determine Version
-        id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.10.2
-        with:
-          useConfigFile: true
-
-      - name: Display GitVersion outputs
-        run: |
-          Write-Host "Calculated Version Information:"
-          Write-Host "  SemVer: ${{ steps.gitversion.outputs.semVer }}"
-          Write-Host "  MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
-          Write-Host "  AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
-          Write-Host "  InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
-        shell: pwsh
+    uses: ./.github/workflows/reusable-version-check.yml
 
   # Main build and test job
   build-and-test:
@@ -65,17 +34,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v0.10.2
-        with:
-          versionSpec: "5.x"
-
-      - name: Determine Version
-        id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.10.2
-        with:
-          useConfigFile: true
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -94,10 +52,10 @@ jobs:
           dotnet build src/Ormico.DbPatchManager.sln `
             --configuration ${{ env.BUILD_CONFIGURATION }} `
             --no-restore `
-            -p:Version=${{ steps.gitversion.outputs.semVer }} `
-            -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} `
-            -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} `
-            -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
+            -p:Version=${{ needs.version-check.outputs.semVer }} `
+            -p:AssemblyVersion=${{ needs.version-check.outputs.assemblySemVer }} `
+            -p:FileVersion=${{ needs.version-check.outputs.assemblySemVer }} `
+            -p:InformationalVersion=${{ needs.version-check.outputs.informationalVersion }}
         shell: pwsh
 
       - name: Run unit tests
