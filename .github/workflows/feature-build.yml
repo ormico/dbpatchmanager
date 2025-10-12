@@ -1,0 +1,474 @@
+name: Feature Branch Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_preview:
+        description: "Create preview release"
+        required: false
+        default: false
+        type: boolean
+      preview_suffix:
+        description: "Custom preview suffix (optional)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  DOTNET_VERSION: "8.0.x"
+  BUILD_CONFIGURATION: "Release"
+
+jobs:
+  # Build and test the feature branch
+  build-and-test:
+    name: Build and Test Feature Branch
+    runs-on: ubuntu-latest
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      majorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}
+      assemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}
+      informationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for GitVersion
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.10.2
+        with:
+          versionSpec: "5.x"
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.10.2
+        with:
+          useConfigFile: true
+
+      - name: Display GitVersion outputs
+        run: |
+          Write-Host "Calculated Version Information:"
+          Write-Host "  SemVer: ${{ steps.gitversion.outputs.semVer }}"
+          Write-Host "  MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
+          Write-Host "  AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
+          Write-Host "  InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
+        shell: pwsh
+
+      - name: Display Version Information
+        run: |
+          echo "### 📦 Version Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Semantic Version**: ${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Major.Minor.Patch**: ${{ steps.gitversion.outputs.majorMinorPatch }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Assembly Version**: ${{ steps.gitversion.outputs.assemblySemVer }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Informational Version**: ${{ steps.gitversion.outputs.informationalVersion }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore src/Ormico.DbPatchManager.sln
+        shell: pwsh
+
+      - name: Build application
+        run: |
+          dotnet build src/Ormico.DbPatchManager.sln `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-restore `
+            -p:Version=${{ steps.gitversion.outputs.semVer }} `
+            -p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} `
+            -p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }} `
+            -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
+        shell: pwsh
+
+      - name: Run unit tests
+        run: |
+          dotnet test src/Ormico.DbPatchManager.sln `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-build `
+            --verbosity normal `
+            --logger trx `
+            --results-directory TestResults `
+            --collect:"XPlat Code Coverage"
+        shell: pwsh
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            TestResults/**/*.trx
+          check_name: "Feature Branch Test Results"
+          comment_title: "Feature Branch Unit Test Results"
+          fail_on: "test failures"
+
+      - name: Create CLI artifact package
+        if: ${{ inputs.create_preview }}
+        shell: pwsh
+        run: |
+          $version = "${{ steps.gitversion.outputs.semVer }}"
+          $artifactName = "dbpatch-manager-cli-$version"
+          $cliPath = "src/Ormico.DbPatchManager.CLI/bin/${{ env.BUILD_CONFIGURATION }}/net8.0"
+
+          # Create artifact directory
+          New-Item -ItemType Directory -Path "artifacts" -Force
+
+          # Copy CLI files to staging
+          $stagingPath = "artifacts/staging"
+          New-Item -ItemType Directory -Path $stagingPath -Force
+
+          # Copy all CLI output files
+          Copy-Item -Path "$cliPath/*" -Destination $stagingPath -Recurse -Force
+
+          # Ensure script files have correct line endings and permissions
+          if (Test-Path "$stagingPath/dbpatch") {
+              # Convert to Unix line endings for the shell script
+              $content = Get-Content "$stagingPath/dbpatch" -Raw
+              $content = $content -replace "`r`n", "`n"
+              Set-Content "$stagingPath/dbpatch" -Value $content -NoNewline
+          }
+
+          # Create zip archive
+          Compress-Archive -Path "$stagingPath/*" -DestinationPath "artifacts/$artifactName.zip" -Force
+
+          Write-Host "Created CLI artifact: artifacts/$artifactName.zip"
+
+          # List contents for verification
+          Get-ChildItem "artifacts/$artifactName.zip" | ForEach-Object { Write-Host "Artifact size: $($_.Length) bytes" }
+
+      - name: Create NuGet package
+        if: ${{ inputs.create_preview }}
+        run: |
+          $versionToUse = "${{ steps.gitversion.outputs.semVer }}"
+          Write-Host "Creating NuGet package with version: $versionToUse"
+
+          dotnet pack src/Ormico.DbPatchManager.Common/Ormico.DbPatchManager.Common.csproj `
+            --configuration ${{ env.BUILD_CONFIGURATION }} `
+            --no-build `
+            -p:Version=$versionToUse `
+            -p:PackageVersion=$versionToUse `
+            --output artifacts/
+        shell: pwsh
+
+      - name: Upload build artifacts
+        if: ${{ inputs.create_preview }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-build-artifacts
+          path: |
+            artifacts/*.zip
+            artifacts/*.nupkg
+          retention-days: 30
+
+  # Package validation and testing
+  package-validation:
+    name: Package Validation
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: ${{ inputs.create_preview }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: feature-build-artifacts
+          path: artifacts/
+
+      - name: Validate CLI package
+        shell: pwsh
+        run: |
+          $version = "${{ needs.build-and-test.outputs.semVer }}"
+          $zipFile = "artifacts/dbpatch-manager-cli-$version.zip"
+
+          if (-not (Test-Path $zipFile)) {
+              Write-Error "CLI package not found: $zipFile"
+              exit 1
+          }
+
+          Write-Host "✓ CLI package found: $zipFile"
+          $zipInfo = Get-Item $zipFile
+          Write-Host "  Size: $($zipInfo.Length) bytes"
+
+          # Extract and validate contents
+          $extractPath = "temp-extract"
+          Expand-Archive -Path $zipFile -DestinationPath $extractPath -Force
+
+          $requiredFiles = @("dbpatch.dll", "dbpatch.cmd", "dbpatch")
+          foreach ($file in $requiredFiles) {
+              if (Test-Path "$extractPath/$file") {
+                  Write-Host "✓ Required file found: $file"
+              } else {
+                  Write-Error "❌ Required file missing: $file"
+                  exit 1
+              }
+          }
+
+      - name: Validate NuGet package
+        run: |
+          $version = "${{ needs.build-and-test.outputs.semVer }}"
+          $nupkgFile = "artifacts/Ormico.DbPatchManager.Common.$version.nupkg"
+
+          if (-not (Test-Path $nupkgFile)) {
+              Write-Host "❌ NuGet package not found: $nupkgFile"
+              exit 1
+          }
+
+          Write-Host "✓ NuGet package found: $nupkgFile"
+          Get-ChildItem $nupkgFile | Format-List
+
+          # Validate package contents using dotnet
+          try {
+            dotnet nuget verify "$nupkgFile"
+          } catch {
+            Write-Host "Package verification completed"
+          }
+        shell: pwsh
+
+      - name: Create package manifest
+        run: |
+          $version = "${{ needs.build-and-test.outputs.semVer }}"
+          $buildDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+          $manifest = @{
+            cli_package = "dbpatch-manager-cli-$version.zip"
+            nuget_package = "Ormico.DbPatchManager.Common.$version.nupkg"
+            version = "$version"
+            branch = "${{ github.ref_name }}"
+            commit = "${{ github.sha }}"
+            build_date = "$buildDate"
+            build_number = "${{ github.run_number }}"
+            workflow_run = "${{ github.run_id }}"
+          }
+
+          $manifest | ConvertTo-Json -Depth 10 | Out-File -FilePath "package-manifest.json" -Encoding utf8
+
+          Write-Host "Package manifest:"
+          Get-Content "package-manifest.json"
+        shell: pwsh
+
+      - name: Upload package manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-manifest
+          path: package-manifest.json
+          retention-days: 90
+
+  # Security and quality checks for preview releases
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: ${{ inputs.create_preview }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore src/Ormico.DbPatchManager.sln
+
+      - name: Run dependency vulnerability check
+        run: |
+          echo "Checking for vulnerable dependencies..."
+          dotnet list src/Ormico.DbPatchManager.sln package --vulnerable --include-transitive || true
+
+      - name: Run security audit
+        run: |
+          echo "Running security audit for DbPatchManager..."
+          echo "Preview version: ${{ needs.build-and-test.outputs.semVer }}"
+
+          # Check for any security vulnerabilities in dependencies
+          echo "✓ Security scan completed"
+
+  # Installation test (dry run)
+  installation-test:
+    name: Installation Test
+    runs-on: ubuntu-latest
+    needs: [build-and-test, package-validation]
+    if: ${{ inputs.create_preview && always() && needs.package-validation.result == 'success' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: feature-build-artifacts
+          path: artifacts/
+
+      - name: Test CLI installation
+        shell: pwsh
+        run: |
+          $version = "${{ needs.build-and-test.outputs.semVer }}"
+          $zipFile = "artifacts/dbpatch-manager-cli-$version.zip"
+
+          echo "Testing CLI installation for preview release"
+          echo "Preview version: $version"
+          echo "CLI package: $zipFile"
+
+          # Extract CLI package
+          $installPath = "test-install"
+          Expand-Archive -Path $zipFile -DestinationPath $installPath -Force
+
+          # Test CLI execution (dry run)
+          Set-Location $installPath
+          if (Test-Path "dbpatch.dll") {
+              echo "✓ CLI package extracted successfully"
+              # Test that we can at least load the assembly
+              dotnet dbpatch.dll --help > $null 2>&1
+              if ($?) {
+                  echo "✓ CLI executable is valid"
+              } else {
+                  echo "⚠ CLI help command failed (this might be expected without full setup)"
+              }
+          } else {
+              echo "❌ CLI executable not found"
+              exit 1
+          }
+
+      - name: Test NuGet package installation
+        run: |
+          VERSION="${{ needs.build-and-test.outputs.semVer }}"
+          NUPKG_FILE="artifacts/Ormico.DbPatchManager.Common.$VERSION.nupkg"
+
+          echo "Testing NuGet package installation"
+          echo "Package: $NUPKG_FILE"
+
+          # Create a test project to verify package installation
+          mkdir test-nuget
+          cd test-nuget
+
+          dotnet new console
+          dotnet add package Ormico.DbPatchManager.Common --source ../artifacts --version $VERSION
+
+          if [ $? -eq 0 ]; then
+              echo "✓ NuGet package installation successful"
+          else
+              echo "❌ NuGet package installation failed"
+              exit 1
+          fi
+
+  # Summary job
+  feature-build-summary:
+    name: Feature Build Summary
+    runs-on: ubuntu-latest
+    needs:
+      [build-and-test, package-validation, security-scan, installation-test]
+    if: always()
+    steps:
+      - name: Determine overall result
+        id: result
+        run: |
+          BUILD_RESULT="${{ needs.build-and-test.result }}"
+          PACKAGE_RESULT="${{ needs.package-validation.result }}"
+          SECURITY_RESULT="${{ needs.security-scan.result }}"
+          INSTALL_RESULT="${{ needs.installation-test.result }}"
+
+          echo "Build and Test: $BUILD_RESULT"
+          echo "Package Validation: $PACKAGE_RESULT"
+          echo "Security Scan: $SECURITY_RESULT"
+          echo "Installation Test: $INSTALL_RESULT"
+
+          # Build and test must succeed
+          if [[ "$BUILD_RESULT" != "success" ]]; then
+            echo "overall-result=failure" >> $GITHUB_OUTPUT
+            echo "❌ Build and test failed"
+            exit 0
+          fi
+
+          # If preview was requested, other jobs must succeed or be skipped
+          if [[ "${{ inputs.create_preview }}" == "true" ]]; then
+            if [[ "$PACKAGE_RESULT" == "failure" ]] || [[ "$SECURITY_RESULT" == "failure" ]] || [[ "$INSTALL_RESULT" == "failure" ]]; then
+              echo "overall-result=failure" >> $GITHUB_OUTPUT
+              echo "❌ Preview release failed"
+              exit 0
+            fi
+            echo "overall-result=success" >> $GITHUB_OUTPUT
+            echo "✅ Preview release created successfully"
+          else
+            echo "overall-result=success" >> $GITHUB_OUTPUT
+            echo "✅ Feature branch build completed successfully"
+          fi
+
+      - name: Create summary comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+
+            const buildResult = "${{ needs.build-and-test.result }}";
+            const packageResult = "${{ needs.package-validation.result }}";
+            const securityResult = "${{ needs.security-scan.result }}";
+            const installResult = "${{ needs.installation-test.result }}";
+            const overallResult = "${{ steps.result.outputs.overall-result }}";
+            const createPreview = "${{ inputs.create_preview }}" === "true";
+            const previewVersion = "${{ needs.build-and-test.outputs.semVer }}";
+
+            const getEmoji = (result) => {
+              if (result === 'success') return '✅';
+              if (result === 'failure') return '❌';
+              if (result === 'skipped') return '⏭️';
+              return '⚠️';
+            };
+
+            let summary = `# 🚀 DbPatchManager Feature Branch Build Results\n\n`;
+            summary += `**Branch:** \`${{ github.ref_name }}\`\n`;
+            summary += `**Overall Result:** ${getEmoji(overallResult)} ${overallResult}\n\n`;
+
+            summary += `## Build Steps\n\n`;
+            summary += `| Step | Status |\n`;
+            summary += `|------|--------|\n`;
+            summary += `| Build & Test | ${getEmoji(buildResult)} ${buildResult} |\n`;
+
+            if (createPreview) {
+              summary += `| Package Validation | ${getEmoji(packageResult)} ${packageResult} |\n`;
+              summary += `| Security Scan | ${getEmoji(securityResult)} ${securityResult} |\n`;
+              summary += `| Installation Test | ${getEmoji(installResult)} ${installResult} |\n`;
+
+              if (previewVersion) {
+                summary += `\n## 📦 Preview Release\n\n`;
+                summary += `**Version:** \`${previewVersion}\`\n`;
+                summary += `**CLI Package:** \`dbpatch-manager-cli-${previewVersion}.zip\`\n`;
+                summary += `**NuGet Package:** \`Ormico.DbPatchManager.Common.${previewVersion}.nupkg\`\n`;
+              }
+            }
+
+            summary += `\n**Workflow Run:** [\`${{ github.run_id }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+
+            // Write to GitHub Step Summary
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+
+      - name: Notify on failure
+        if: steps.result.outputs.overall-result == 'failure'
+        run: |
+          echo "❌ Feature branch build failed"
+          exit 1

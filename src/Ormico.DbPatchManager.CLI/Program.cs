@@ -1,7 +1,9 @@
 ﻿using System;
+
 using CommandLine;
-using Ormico.DbPatchManager.Logic;
+
 using Ormico.DbPatchManager.CLI.CommandLineOptions;
+using Ormico.DbPatchManager.Logic;
 
 namespace Ormico.DbPatchManager.CLI
 {

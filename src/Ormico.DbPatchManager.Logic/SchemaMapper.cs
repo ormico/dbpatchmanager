@@ -20,7 +20,7 @@ namespace Ormico.DbPatchManager.Logic
             return rc;
         }
 
-        Dictionary<string, PatchesSchemaVersionEnum> schemaNameToEnum = new Dictionary<string, PatchesSchemaVersionEnum>()
+        readonly Dictionary<string, PatchesSchemaVersionEnum> schemaNameToEnum = new Dictionary<string, PatchesSchemaVersionEnum>()
         {
             { PatchesSchemaVersionId.DbPatchV1, PatchesSchemaVersionEnum.DbPatchV1 }
         };

@@ -1,6 +1,7 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
+
+using Newtonsoft.Json;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -28,7 +29,7 @@ namespace Ormico.DbPatchManager.Logic
     }
 
     public class PatchComparer : IEqualityComparer<Patch>
-    { 
+    {
         // Products are equal if their id is equal.
         public bool Equals(Patch x, Patch y)
         {
@@ -49,7 +50,7 @@ namespace Ormico.DbPatchManager.Logic
         public int GetHashCode(Patch product)
         {
             //Get hash code for the Name field if it is not null.
-            int rc = product?.Id?.GetHashCode()??0;
+            int rc = product?.Id?.GetHashCode() ?? 0;
 
             //Calculate the hash code for the product.
             return rc;

@@ -48,12 +48,12 @@ namespace Ormico.DbPatchManager.Logic
         public List<Patch> GetOpenPatches()
         {
             var depends = (from p in patches
-                          from d in p.DependsOn
-                          select d.Id).Distinct();
+                           from d in p.DependsOn
+                           select d.Id).Distinct();
 
             var rc = from p in patches
-                             where !depends.Contains(p.Id)
-                             select p;
+                     where !depends.Contains(p.Id)
+                     select p;
             return rc.ToList();
         }
 
@@ -61,10 +61,10 @@ namespace Ormico.DbPatchManager.Logic
         {
             Patch rc = null;
             var firstQuery = from f in patches
-                        where f.DependsOn == null || f.DependsOn.Count() <= 0
-                        select f;
+                             where f.DependsOn == null || f.DependsOn.Count() <= 0
+                             select f;
             var first = firstQuery.ToList();
-            if(first.Count() == 1)
+            if (first.Count() == 1)
             {
                 rc = first.FirstOrDefault();
             }

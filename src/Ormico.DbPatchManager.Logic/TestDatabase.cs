@@ -1,12 +1,14 @@
-﻿using Newtonsoft.Json;
-using Ormico.DbPatchManager.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using Newtonsoft.Json;
+
+using Ormico.DbPatchManager.Common;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -16,7 +18,7 @@ namespace Ormico.DbPatchManager.Logic
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
-        FileSystem _io = new FileSystem();
+        readonly FileSystem _io = new FileSystem();
 
         string _fileName;
         TestDb _testDb;
@@ -68,7 +70,7 @@ namespace Ormico.DbPatchManager.Logic
 
         void Load()
         {
-            if(_io.File.Exists(_fileName))
+            if (_io.File.Exists(_fileName))
             {
                 _testDb = JsonConvert.DeserializeObject<TestDb>(_io.File.ReadAllText(_fileName));
             }

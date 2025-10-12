@@ -1,10 +1,12 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Ormico.DbPatchManager.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
+
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+using Ormico.DbPatchManager.Common;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -29,12 +31,12 @@ namespace Ormico.DbPatchManager.Logic
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
-        IFileSystem _io;
+        readonly IFileSystem _io;
 
         /// <summary>
         /// Path and name of file to read and write.
         /// </summary>
-        string _filePath;
+        readonly string _filePath;
 
         /// <summary>
         /// Path and name of secondary file to read and write.
@@ -43,7 +45,7 @@ namespace Ormico.DbPatchManager.Logic
         /// in the main file which is checked into source control. The connection string could
         /// be placed in he local file which is not checked into source control.
         /// </summary>
-        string _localFilePath;
+        readonly string _localFilePath;
 
         /// <summary>
         /// Read DatabaseBuildConfiguration data from file path passed to constructor.
@@ -52,7 +54,7 @@ namespace Ormico.DbPatchManager.Logic
         public DatabaseBuildConfiguration Read()
         {
             DatabaseBuildConfiguration rc = null;
-            if(_io.File.Exists(_filePath))
+            if (_io.File.Exists(_filePath))
             {
                 var o = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_filePath));
 
@@ -85,21 +87,21 @@ namespace Ormico.DbPatchManager.Logic
                     rc.patches = new List<Patch>();
                 }
                 else
-                {   
+                {
                     var patches = (from p in o["patches"]
-                                 select new Patch()
-                                 {
-                                     Id = (string)p["id"]
-                                 }).ToList();
+                                   select new Patch()
+                                   {
+                                       Id = (string)p["id"]
+                                   }).ToList();
                     // populate DependsOn
-                    foreach(var p in patches)
+                    foreach (var p in patches)
                     {
                         var cur = from x in o["patches"]
-                                    from d in x["dependsOn"]
-                                    from a in patches
-                                    where (string)x["id"] == p.Id &&
-                                        a.Id == (string)d
-                                    select a;
+                                  from d in x["dependsOn"]
+                                  from a in patches
+                                  where (string)x["id"] == p.Id &&
+                                      a.Id == (string)d
+                                  select a;
                         p.DependsOn = cur.Distinct(new PatchComparer()).ToList();
                         //todo: double check this query
                         var children = from x in o["patches"]
@@ -199,12 +201,12 @@ namespace Ormico.DbPatchManager.Logic
                 if (localO["patches"] == null && buildConfiguration.patches != null)
                 {
                     data["patches"] = JArray.FromObject(from p in buildConfiguration.patches
-                                      select new
-                                      {
-                                        id = p.Id,
-                                        dependsOn = p.DependsOn != null ? (from d in p.DependsOn
-                                            select d.Id) : null
-                                      });
+                                                        select new
+                                                        {
+                                                            id = p.Id,
+                                                            dependsOn = p.DependsOn != null ? (from d in p.DependsOn
+                                                                                               select d.Id) : null
+                                                        });
                 }
             }
             else
@@ -221,8 +223,8 @@ namespace Ormico.DbPatchManager.Logic
                               select new
                               {
                                   id = p.Id,
-                                  dependsOn = p.DependsOn != null?(from d in p.DependsOn.Distinct(new PatchComparer())
-                                              select d.Id):null
+                                  dependsOn = p.DependsOn != null ? (from d in p.DependsOn.Distinct(new PatchComparer())
+                                                                     select d.Id) : null
                               }
                 });
             }

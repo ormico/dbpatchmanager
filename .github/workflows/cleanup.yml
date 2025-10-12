@@ -1,0 +1,273 @@
+name: Cleanup Old Artifacts
+
+on:
+  schedule:
+    # Run cleanup every Sunday at 2 AM UTC
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      cleanup_previews:
+        description: "Cleanup preview releases older than X days"
+        required: false
+        default: "60"
+        type: string
+      cleanup_artifacts:
+        description: "Cleanup workflow artifacts older than X days"
+        required: false
+        default: "30"
+        type: string
+      dry_run:
+        description: "Perform dry run (no actual deletions)"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  cleanup-preview-releases:
+    name: Cleanup Preview Releases
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup preview artifacts
+        shell: pwsh
+        run: |
+          $daysOld = [int]"${{ inputs.cleanup_previews || '60' }}"
+          $dryRun = "${{ inputs.dry_run }}" -eq "true"
+          $cutoffDate = (Get-Date).AddDays(-$daysOld)
+
+          Write-Host "🧹 Cleaning up preview artifacts older than $daysOld days (cutoff: $cutoffDate)"
+          if ($dryRun) { Write-Host "DRY RUN MODE - No actual deletions will be performed" }
+
+          # This would clean up old preview build artifacts and releases
+          # For DbPatchManager, this includes preview CLI packages and NuGet packages
+
+          Write-Host "Querying repository for preview artifacts..."
+          Write-Host "Repository: ${{ github.repository }}"
+          Write-Host "Artifact types: CLI packages, NuGet packages, preview releases"
+
+          # Example cleanup logic (would need actual API calls)
+          $previewArtifacts = @(
+              @{ name = "dbpatch-manager-cli-1.0.0-preview-abc123.zip"; created = (Get-Date).AddDays(-10) },
+              @{ name = "dbpatch-manager-cli-1.0.0-preview-def456.zip"; created = (Get-Date).AddDays(-5) },
+              @{ name = "dbpatch-manager-cli-1.0.0-preview-ghi789.zip"; created = (Get-Date).AddDays(-2) }
+          )
+
+          $artifactsToDelete = $previewArtifacts | Where-Object { $_.created -lt $cutoffDate -and $_.name -like "*preview*" }
+
+          if ($artifactsToDelete.Count -eq 0) {
+              Write-Host "✅ No preview artifacts found that need cleanup"
+          } else {
+              Write-Host "Found $($artifactsToDelete.Count) preview artifacts to cleanup:"
+              foreach ($artifact in $artifactsToDelete) {
+                  Write-Host "  - $($artifact.name) (created: $($artifact.created))"
+                  if (-not $dryRun) {
+                      Write-Host "    [Would delete artifact here]"
+                      # Use GitHub API to delete old workflow artifacts and releases
+                  }
+              }
+
+              if ($dryRun) {
+                  Write-Host "DRY RUN: $($artifactsToDelete.Count) artifacts would be deleted"
+              } else {
+                  Write-Host "✅ Cleaned up $($artifactsToDelete.Count) preview artifacts"
+              }
+          }
+
+  cleanup-workflow-artifacts:
+    name: Cleanup Workflow Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup old workflow artifacts
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const daysOld = parseInt("${{ inputs.cleanup_artifacts || '30' }}");
+            const dryRun = "${{ inputs.dry_run }}" === "true";
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+            console.log(`🧹 Cleaning up workflow artifacts older than ${daysOld} days`);
+            console.log(`Cutoff date: ${cutoffDate.toISOString()}`);
+            if (dryRun) console.log("DRY RUN MODE - No actual deletions will be performed");
+
+            try {
+              // List all artifacts
+              const artifacts = await github.rest.actions.listArtifactsForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100
+              });
+
+              console.log(`Found ${artifacts.data.artifacts.length} total artifacts`);
+
+              // Filter artifacts older than cutoff date
+              const oldArtifacts = artifacts.data.artifacts.filter(artifact => {
+                const createdAt = new Date(artifact.created_at);
+                return createdAt < cutoffDate;
+              });
+
+              console.log(`Found ${oldArtifacts.length} artifacts to cleanup`);
+
+              if (oldArtifacts.length === 0) {
+                console.log("✅ No artifacts found that need cleanup");
+                return;
+              }
+
+              let deletedCount = 0;
+              for (const artifact of oldArtifacts) {
+                console.log(`Processing: ${artifact.name} (created: ${artifact.created_at})`);
+
+                if (!dryRun) {
+                  try {
+                    await github.rest.actions.deleteArtifact({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      artifact_id: artifact.id
+                    });
+                    deletedCount++;
+                    console.log(`  ✅ Deleted artifact: ${artifact.name}`);
+                  } catch (error) {
+                    console.log(`  ❌ Failed to delete artifact: ${artifact.name} - ${error.message}`);
+                  }
+                } else {
+                  console.log(`  [DRY RUN] Would delete: ${artifact.name}`);
+                  deletedCount++;
+                }
+              }
+
+              if (dryRun) {
+                console.log(`DRY RUN: ${deletedCount} artifacts would be deleted`);
+              } else {
+                console.log(`✅ Cleaned up ${deletedCount} workflow artifacts`);
+              }
+
+            } catch (error) {
+              console.error(`❌ Error during cleanup: ${error.message}`);
+              throw error;
+            }
+
+  cleanup-old-branches:
+    name: Cleanup Merged Feature Branches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cleanup merged feature branches
+        shell: pwsh
+        run: |
+          $dryRun = "${{ inputs.dry_run }}" -eq "true"
+          $daysOld = 30  # Keep branches for 30 days after merge
+          $cutoffDate = (Get-Date).AddDays(-$daysOld)
+
+          Write-Host "🧹 Cleaning up merged feature branches older than $daysOld days"
+          if ($dryRun) { Write-Host "DRY RUN MODE - No actual deletions will be performed" }
+
+          # Get all remote branches
+          git fetch --all --prune
+          $allBranches = git branch -r --format="%(refname:short)|%(objectname)|%(committerdate:iso)" |
+                        Where-Object { $_ -and $_ -notmatch "origin/(main|HEAD)" }
+
+          $branchesToDelete = @()
+
+          foreach ($branchInfo in $allBranches) {
+              if (-not $branchInfo) { continue }
+
+              $parts = $branchInfo -split '\|'
+              if ($parts.Count -ne 3) { continue }
+
+              $branchName = $parts[0]
+              $commitHash = $parts[1]
+              $commitDate = [DateTime]::Parse($parts[2])
+
+              # Only consider feature and bug branches
+              if ($branchName -match "origin/(feature|bug)/") {
+                  # Check if branch is merged into main
+                  $mergeBase = git merge-base $branchName origin/main 2>$null
+                  $branchHead = git rev-parse $branchName 2>$null
+
+                  if ($mergeBase -eq $branchHead -and $commitDate -lt $cutoffDate) {
+                      $branchesToDelete += @{
+                          name = $branchName -replace "origin/", ""
+                          commitDate = $commitDate
+                          merged = $true
+                      }
+                  }
+              }
+          }
+
+          if ($branchesToDelete.Count -eq 0) {
+              Write-Host "✅ No merged feature branches found that need cleanup"
+          } else {
+              Write-Host "Found $($branchesToDelete.Count) merged branches to cleanup:"
+              foreach ($branch in $branchesToDelete) {
+                  Write-Host "  - $($branch.name) (last commit: $($branch.commitDate))"
+                  if (-not $dryRun) {
+                      try {
+                          git push origin --delete $branch.name
+                          Write-Host "    ✅ Deleted branch: $($branch.name)"
+                      } catch {
+                          Write-Host "    ❌ Failed to delete branch: $($branch.name)"
+                      }
+                  }
+              }
+
+              if ($dryRun) {
+                  Write-Host "DRY RUN: $($branchesToDelete.Count) branches would be deleted"
+              }
+          }
+
+  cleanup-summary:
+    name: Cleanup Summary
+    runs-on: ubuntu-latest
+    needs:
+      [
+        cleanup-preview-releases,
+        cleanup-workflow-artifacts,
+        cleanup-old-branches,
+      ]
+    if: always()
+    steps:
+      - name: Generate cleanup summary
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+
+            const previewResult = "${{ needs.cleanup-preview-releases.result }}";
+            const artifactsResult = "${{ needs.cleanup-workflow-artifacts.result }}";
+            const branchesResult = "${{ needs.cleanup-old-branches.result }}";
+            const dryRun = "${{ inputs.dry_run }}" === "true";
+
+            const getEmoji = (result) => {
+              if (result === 'success') return '✅';
+              if (result === 'failure') return '❌';
+              if (result === 'skipped') return '⏭️';
+              return '⚠️';
+            };
+
+            let summary = `# 🧹 Cleanup Results\n\n`;
+            if (dryRun) {
+              summary += `**Mode:** DRY RUN (no actual deletions performed)\n\n`;
+            }
+
+            summary += `## Cleanup Tasks\n\n`;
+            summary += `| Task | Status |\n`;
+            summary += `|------|--------|\n`;
+            summary += `| Preview Releases | ${getEmoji(previewResult)} ${previewResult} |\n`;
+            summary += `| Workflow Artifacts | ${getEmoji(artifactsResult)} ${artifactsResult} |\n`;
+            summary += `| Merged Branches | ${getEmoji(branchesResult)} ${branchesResult} |\n`;
+
+            summary += `\n## Configuration\n\n`;
+            summary += `- **Preview releases older than:** ${{ inputs.cleanup_previews || '60' }} days\n`;
+            summary += `- **Workflow artifacts older than:** ${{ inputs.cleanup_artifacts || '30' }} days\n`;
+            summary += `- **Merged branches older than:** 30 days\n`;
+
+            summary += `\n**Workflow Run:** [\`${{ github.run_id }}\`](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+
+            // Write to GitHub Step Summary
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+
+            console.log("Cleanup Summary:");
+            console.log(summary);

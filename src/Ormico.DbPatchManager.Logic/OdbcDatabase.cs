@@ -1,11 +1,13 @@
-﻿using Dapper;
-using Ormico.DbPatchManager.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.Odbc;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
+using Dapper;
+
+using Ormico.DbPatchManager.Common;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -15,7 +17,7 @@ namespace Ormico.DbPatchManager.Logic
         {
             _option = Options;
 
-            if(Options.AddInstalledPatchSql == null ||
+            if (Options.AddInstalledPatchSql == null ||
                 Options.GetInstalledPatchesSql == null ||
                 Options.InitPatchTableSql == null)
             {
@@ -31,7 +33,7 @@ namespace Ormico.DbPatchManager.Logic
 
         public void Dispose()
         {
-            if(_con != null)
+            if (_con != null)
             {
                 _con.Dispose();
             }

@@ -1,0 +1,55 @@
+name: Reusable Version Check
+
+# Reusable workflow for GitVersion calculation
+# This workflow calculates semantic version using GitVersion and outputs
+# the version information for use by calling workflows.
+on:
+  workflow_call:
+    outputs:
+      semVer:
+        description: "Full semantic version (e.g., 2.2.3-alpha.5)"
+        value: ${{ jobs.version-check.outputs.semVer }}
+      majorMinorPatch:
+        description: "Version without pre-release (e.g., 2.2.3)"
+        value: ${{ jobs.version-check.outputs.majorMinorPatch }}
+      assemblySemVer:
+        description: "Assembly version (e.g., 2.2.3.0)"
+        value: ${{ jobs.version-check.outputs.assemblySemVer }}
+      informationalVersion:
+        description: "Full version with metadata"
+        value: ${{ jobs.version-check.outputs.informationalVersion }}
+
+jobs:
+  version-check:
+    name: version-check
+    runs-on: ubuntu-latest
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
+      majorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}
+      assemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}
+      informationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for GitVersion
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.10.2
+        with:
+          versionSpec: "5.x"
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.10.2
+        with:
+          useConfigFile: true
+
+      - name: Display GitVersion outputs
+        run: |
+          Write-Host "Calculated Version Information:"
+          Write-Host "  SemVer: ${{ steps.gitversion.outputs.semVer }}"
+          Write-Host "  MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
+          Write-Host "  AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
+          Write-Host "  InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
+        shell: pwsh

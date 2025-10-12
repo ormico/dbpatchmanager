@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using System.Reflection;
+
 using Ormico.DbPatchManager.Common;
 
 namespace Ormico.DbPatchManager.Logic
@@ -13,7 +14,7 @@ namespace Ormico.DbPatchManager.Logic
         public IDatabase LoadDatabasePlugin(string PluginType)
         {
             IDatabase rc = null;
-            if(string.Equals(PluginType, "TestDatabase", StringComparison.OrdinalIgnoreCase) ||
+            if (string.Equals(PluginType, "TestDatabase", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(PluginType, "test", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(PluginType, typeof(TestDatabase).ToString(), StringComparison.OrdinalIgnoreCase))
             {
@@ -35,10 +36,10 @@ namespace Ormico.DbPatchManager.Logic
             {
                 string[] parts = PluginType.Split(',');
                 string fileName, typeName;
-                if(parts != null && parts.Length > 0)
+                if (parts != null && parts.Length > 0)
                 {
                     fileName = parts[0];
-                    if(parts.Length > 1)
+                    if (parts.Length > 1)
                     {
                         typeName = parts[1];
                         //todo: what to do if null?
