@@ -26,7 +26,7 @@ namespace Ormico.DbPatchManager.Logic
         /// <param name="ConfigFile"></param>
         /// <param name="Rand"></param>
         /// <param name="Io"></param>
-        public PatchManager(string ConfigFile, Random Rand, FileSystem Io)
+        public PatchManager(string ConfigFile, Random Rand, IFileSystem Io)
         {
             _configFileName = ConfigFile;
             _rand = Rand;
@@ -47,7 +47,7 @@ namespace Ormico.DbPatchManager.Logic
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
-        readonly FileSystem _io;
+        readonly IFileSystem _io;
 
         public void InitConfig(InitOptions Options)
         {
@@ -81,7 +81,7 @@ namespace Ormico.DbPatchManager.Logic
             }
             else
             {
-                var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName);
+            var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName, _io);
                 var cfg = cfgWriter.Read();
 
                 // load options
@@ -117,7 +117,7 @@ namespace Ormico.DbPatchManager.Logic
 
         public void Build()
         {
-            var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName);
+            var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName, _io);
             _configuration = cfgWriter.Read();
 
             // load options
@@ -153,6 +153,8 @@ namespace Ormico.DbPatchManager.Logic
                 //todo: add log/console output
                 Console.WriteLine($"Installing: {fn}");
                 string sql = _io.File.ReadAllText(fn);
+                if (string.IsNullOrWhiteSpace(sql))
+                    continue;
                 db.ExecuteProgrammabilityScript(sql);
             }
         }
@@ -258,6 +260,8 @@ namespace Ormico.DbPatchManager.Logic
                                 {
                                     //todo: check file size before reading all text
                                     string sql = _io.File.ReadAllText(file);
+                                    if (string.IsNullOrWhiteSpace(sql))
+                                        continue;
                                     db.ExecuteDDL(sql);
                                 }
                                 else if (string.Equals(ext, ".js", StringComparison.OrdinalIgnoreCase))
