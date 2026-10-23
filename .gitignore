@@ -13,3 +13,5 @@ bin
 obj
 
 src/Ormico.DbPatchManager.CLI/deb/
+
+.local/

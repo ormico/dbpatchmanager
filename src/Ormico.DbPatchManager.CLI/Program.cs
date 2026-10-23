@@ -2,6 +2,7 @@
 using CommandLine;
 using Ormico.DbPatchManager.Logic;
 using Ormico.DbPatchManager.CLI.CommandLineOptions;
+using System.Reflection;
 
 namespace Ormico.DbPatchManager.CLI
 {
@@ -12,13 +13,17 @@ namespace Ormico.DbPatchManager.CLI
             int rc = 0;
             try
             {
-                rc = CommandLine.Parser.Default.ParseArguments(args, typeof(InitCmdLineOptions), typeof(AddPatchCmdLineOptions), typeof(BuildCmdLineOptions))
-                    .MapResult(
-                        (InitCmdLineOptions o) => InitBuildSettings(o),
-                        (AddPatchCmdLineOptions o) => AddPatch(o),
-                        (BuildCmdLineOptions o) => Build(o),
-                        err => 1
-                    );
+                var result = CommandLine.Parser.Default.ParseArguments<InitCmdLineOptions, AddPatchCmdLineOptions, BuildCmdLineOptions, VersionCmdLineOptions>(args);
+
+                rc = result.MapResult(
+                    (InitCmdLineOptions o) => InitBuildSettings(o),
+                    (AddPatchCmdLineOptions o) => AddPatch(o),
+                    (BuildCmdLineOptions o) => Build(o),
+                    (VersionCmdLineOptions o) => ShowVersion(o),
+                    err => 1
+                );
+
+                return rc;
             }
             catch (Exception ex)
             {
@@ -27,10 +32,8 @@ namespace Ormico.DbPatchManager.CLI
                 {
                     Console.WriteLine($"{ex.InnerException.Message}");
                 }
-                rc = -1;
+                return -1;
             }
-
-            return rc;
         }
 
         private const string _patchFileName = "patches.json";
@@ -68,6 +71,13 @@ namespace Ormico.DbPatchManager.CLI
             PatchManager manager = new PatchManager(_patchFileName, _patchLocalFileName);
             manager.Build();
             return rc;
+        }
+
+        static int ShowVersion(VersionCmdLineOptions options)
+        {
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            Console.WriteLine($"dbpatch {version}");
+            return 0;
         }
     }
 }
