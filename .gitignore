@@ -13,3 +13,6 @@ bin
 obj
 
 src/Ormico.DbPatchManager.CLI/deb/
+
+.worktrees/
+.local/
