@@ -45,8 +45,20 @@ namespace Ormico.DbPatchManager.CLI
         {
             int rc = 0;
             PatchManager manager = new PatchManager(_patchFileName, _patchLocalFileName);
-            //todo: pass all settings
-            manager.InitConfig(new InitOptions() { DbType = options.DbType });
+            try
+            {
+                manager.InitConfig(new InitOptions() { DbType = options.DbType });
+            }
+            catch (System.Data.Common.DbException dbEx)
+            {
+                Console.Error.WriteLine($"Database error: {dbEx.Message}");
+                rc = 2;
+            }
+            catch (ApplicationException appEx)
+            {
+                Console.Error.WriteLine($"Error: {appEx.Message}");
+                rc = 3;
+            }
 
             return rc;
         }
@@ -55,10 +67,23 @@ namespace Ormico.DbPatchManager.CLI
         {
             int rc = 0;
             PatchManager manager = new PatchManager(_patchFileName, _patchLocalFileName);
-            //todo: pass all settings
-            manager.AddPatch(options.Name, new PatchOptions()
+            try
             {
-            });
+                manager.AddPatch(options.Name, new PatchOptions()
+                {
+                });
+            }
+            catch (System.Data.Common.DbException dbEx)
+            {
+                Console.Error.WriteLine($"Database error: {dbEx.Message}");
+                rc = 2;
+            }
+            catch (ApplicationException appEx)
+            {
+                Console.Error.WriteLine($"Error: {appEx.Message}");
+                rc = 3;
+            }
+
             return rc;
         }
 
@@ -66,7 +91,21 @@ namespace Ormico.DbPatchManager.CLI
         {
             int rc = 0;
             PatchManager manager = new PatchManager(_patchFileName, _patchLocalFileName);
-            manager.Build();
+            try
+            {
+                manager.Build();
+            }
+            catch (System.Data.Common.DbException dbEx)
+            {
+                Console.Error.WriteLine($"Database error: {dbEx.Message}");
+                rc = 2;
+            }
+            catch (ApplicationException appEx)
+            {
+                Console.Error.WriteLine($"Error: {appEx.Message}");
+                rc = 3;
+            }
+
             return rc;
         }
     }
