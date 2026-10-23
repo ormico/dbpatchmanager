@@ -1,17 +1,7 @@
-src/.vs/
-temp/
-src2/
-src/packages/
 *.user
-src/Ormico.DbPatchManager.CLI/bin/*
-src/Ormico.DbPatchManager.Cmd/obj/*
-src/Ormico.DbPatchManager.SqlServer/bin/*
-src/Ormico.DbPatchManager.SqlServer/obj/*
-src/Ormico.DbPatchManager/bin/*
-src/Ormico.DbPatchManager/obj/*
-bin
-obj
-
+temp/
+#src/.vs/
+src/packages/
 src/Ormico.DbPatchManager.CLI/deb/
 
 .worktrees/
