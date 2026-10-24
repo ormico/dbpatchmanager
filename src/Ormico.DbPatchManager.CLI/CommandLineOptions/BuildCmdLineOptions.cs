@@ -14,5 +14,8 @@ namespace Ormico.DbPatchManager.CLI.CommandLineOptions
         public BuildCmdLineOptions()
         {
         }
+
+        [Option('w', "whatif", HelpText = "Dry run — list patches and scripts without executing")]
+        public bool WhatIf { get; set; }
     }
 }
