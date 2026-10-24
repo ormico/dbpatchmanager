@@ -94,9 +94,9 @@ namespace Ormico.DbPatchManager.Logic.Tests
             });
             var bcw = new BuildConfigurationWriter(@"\databaseproj\patches.json", @"\databaseproj\patches.local.json", mockFileSystem);
 
-            var o = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(patchesJsonWSchema);
+            using var doc = System.Text.Json.JsonDocument.Parse(patchesJsonWSchema);
 
-            var result = bcw.DetectSchemaVersion(o);
+            var result = bcw.DetectSchemaVersion(doc.RootElement.Clone());
 
             Assert.That(result, Is.EqualTo(SchemaMapper.PatchesSchemaVersionEnum.DbPatchV1));
         }
@@ -111,9 +111,9 @@ namespace Ormico.DbPatchManager.Logic.Tests
             });
             var bcw = new BuildConfigurationWriter(@"\databaseproj\patches.json", @"\databaseproj\patches.local.json", mockFileSystem);
 
-            var o = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(patchesJsonWUnknownSchema);
+            using var doc = System.Text.Json.JsonDocument.Parse(patchesJsonWUnknownSchema);
 
-            var result = bcw.DetectSchemaVersion(o);
+            var result = bcw.DetectSchemaVersion(doc.RootElement.Clone());
 
             Assert.That(result, Is.EqualTo(SchemaMapper.PatchesSchemaVersionEnum.Unknown));
         }
@@ -128,9 +128,9 @@ namespace Ormico.DbPatchManager.Logic.Tests
             });
             var bcw = new BuildConfigurationWriter(@"\databaseproj\patches.json", @"\databaseproj\patches.local.json", mockFileSystem);
 
-            var o = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(patchesJson);
+            using var doc = System.Text.Json.JsonDocument.Parse(patchesJson);
 
-            var result = bcw.DetectSchemaVersion(o);
+            var result = bcw.DetectSchemaVersion(doc.RootElement.Clone());
 
             Assert.That(result, Is.EqualTo(SchemaMapper.PatchesSchemaVersionEnum.DbPatchV1));
         }
@@ -145,9 +145,9 @@ namespace Ormico.DbPatchManager.Logic.Tests
             });
             var bcw = new BuildConfigurationWriter(@"\databaseproj\patches.json", @"\databaseproj\patches.local.json", mockFileSystem);
 
-            var o = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(shortPatchesJson);
+            using var doc = System.Text.Json.JsonDocument.Parse(shortPatchesJson);
 
-            var result = bcw.DetectSchemaVersion(o);
+            var result = bcw.DetectSchemaVersion(doc.RootElement.Clone());
 
             Assert.That(result, Is.EqualTo(SchemaMapper.PatchesSchemaVersionEnum.Unknown));
 

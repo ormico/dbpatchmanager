@@ -1,10 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Ormico.DbPatchManager.Logic
 {
-    [JsonObject(IsReference = true)]
     public class Patch
     {
         public Patch()
@@ -17,11 +16,9 @@ namespace Ormico.DbPatchManager.Logic
             this.DependsOn = DependsOn;
         }
 
-        //todo: constructor for json.net
+        [JsonPropertyName("id")] public string Id { get; /* protected */ set; }
 
-        [JsonProperty("id")] public string Id { get; /* protected */ set; }
-
-        [JsonProperty("dependsOn", ItemIsReference = true)]
+        [JsonPropertyName("dependsOn")]
         public List<Patch> DependsOn { get; /* protected */ set; }
 
         [JsonIgnore] public List<Patch> Children { get; /* protected */ set; }

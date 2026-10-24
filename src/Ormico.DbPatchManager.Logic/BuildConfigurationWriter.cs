@@ -1,10 +1,9 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Ormico.DbPatchManager.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
+using System.Text.Json;
+using Ormico.DbPatchManager.Common;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -13,6 +12,13 @@ namespace Ormico.DbPatchManager.Logic
     /// </summary>
     public class BuildConfigurationWriter
     {
+        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = null,
+            WriteIndented = false,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never
+        };
+
         /// <summary>
         /// 
         /// </summary>
@@ -45,6 +51,73 @@ namespace Ormico.DbPatchManager.Logic
         /// </summary>
         string _localFilePath;
 
+        private static JsonElement MergeJson(JsonElement main, JsonElement local)
+        {
+            using var mainDoc = JsonDocument.Parse(main.GetRawText());
+            using var localDoc = JsonDocument.Parse(local.GetRawText());
+            return MergeElements(mainDoc.RootElement, localDoc.RootElement);
+        }
+
+        private static JsonElement? TryGetProperty(JsonElement element, string propertyName)
+        {
+            if (element.TryGetProperty(propertyName, out var prop))
+                return prop;
+            return null;
+        }
+
+        private static JsonElement MergeElements(JsonElement main, JsonElement local)
+        {
+            if (main.ValueKind == JsonValueKind.Object && local.ValueKind == JsonValueKind.Object)
+            {
+                var merged = new Dictionary<string, string>();
+                
+                foreach (var prop in main.EnumerateObject())
+                {
+                    var localProp = TryGetProperty(local, prop.Name);
+                    if (localProp.HasValue && localProp.Value.ValueKind != JsonValueKind.Null)
+                    {
+                        merged[prop.Name] = MergeElements(prop.Value, localProp.Value).GetRawText();
+                    }
+                    else
+                    {
+                        merged[prop.Name] = prop.Value.GetRawText();
+                    }
+                }
+
+                foreach (var prop in local.EnumerateObject())
+                {
+                    if (!merged.ContainsKey(prop.Name))
+                    {
+                        merged[prop.Name] = prop.Value.GetRawText();
+                    }
+                }
+
+                return JsonDocument.Parse("{" + string.Join(",", merged.Select(kvp => $"\"{kvp.Key}\":{kvp.Value}")) + "}").RootElement;
+            }
+
+            if (main.ValueKind == JsonValueKind.Array && local.ValueKind == JsonValueKind.Array)
+            {
+                var mainItems = new List<string>();
+                foreach (var item in main.EnumerateArray())
+                    mainItems.Add(item.GetRawText());
+
+                var seen = new HashSet<string>(mainItems);
+                foreach (var item in local.EnumerateArray())
+                {
+                    var raw = item.GetRawText();
+                    if (!seen.Contains(raw))
+                    {
+                        seen.Add(raw);
+                        mainItems.Add(raw);
+                    }
+                }
+
+                return JsonDocument.Parse("[" + string.Join(",", mainItems) + "]").RootElement;
+            }
+
+            return local.ValueKind != JsonValueKind.Null ? local : main;
+        }
+
         /// <summary>
         /// Read DatabaseBuildConfiguration data from file path passed to constructor.
         /// </summary>
@@ -54,7 +127,8 @@ namespace Ormico.DbPatchManager.Logic
             DatabaseBuildConfiguration rc = null;
             if(_io.File.Exists(_filePath))
             {
-                var o = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_filePath));
+                using var mainDoc = JsonDocument.Parse(_io.File.ReadAllText(_filePath));
+                var o = mainDoc.RootElement.Clone();
 
                 var schemaVer = DetectSchemaVersion(o);
                 if (schemaVer == SchemaMapper.PatchesSchemaVersionEnum.Unknown)
@@ -62,54 +136,109 @@ namespace Ormico.DbPatchManager.Logic
 
                 if (_io.File.Exists(_localFilePath))
                 {
-                    var localO = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_localFilePath));
-                    o.Merge(localO, new JsonMergeSettings()
-                    {
-                        MergeArrayHandling = MergeArrayHandling.Union
-                    });
+                    using var localDoc = JsonDocument.Parse(_io.File.ReadAllText(_localFilePath));
+                    o = MergeElements(o, localDoc.RootElement);
                 }
 
                 rc = new DatabaseBuildConfiguration();
-                rc.CodeFolder = (string)o["CodeFolder"];
-                rc.CodeFiles = o["CodeFiles"].ToObject<List<string>>();
-                rc.ConnectionString = (string)o["ConnectionString"];
-                rc.DatabaseType = (string)o["DatabaseType"];
-                rc.PatchFolder = (string)o["PatchFolder"];
+                
+                var codeFolderProp = TryGetProperty(o, "CodeFolder");
+                rc.CodeFolder = codeFolderProp?.GetString();
+
+                var codeFilesProp = TryGetProperty(o, "CodeFiles");
+                rc.CodeFiles = codeFilesProp?.Deserialize<List<string>>(_jsonOptions) ?? new List<string>();
+
+                var connStringProp = TryGetProperty(o, "ConnectionString");
+                rc.ConnectionString = connStringProp?.GetString();
+
+                var dbTypeProp = TryGetProperty(o, "DatabaseType");
+                rc.DatabaseType = dbTypeProp?.GetString();
+
+                var patchFolderProp = TryGetProperty(o, "PatchFolder");
+                rc.PatchFolder = patchFolderProp?.GetString();
 
                 // options specific to a database plugin
-                rc.Options = o["Options"]?.ToObject<Dictionary<string, string>>();
+                var optionsProp = TryGetProperty(o, "Options");
+                if (optionsProp.HasValue)
+                {
+                    rc.Options = optionsProp.Value.Deserialize<Dictionary<string, string>>(_jsonOptions);
+                }
 
                 // populate patch list
-                if (o["patches"] == null)
+                var patchesProp = TryGetProperty(o, "patches");
+                if (!patchesProp.HasValue || patchesProp.Value.ValueKind == JsonValueKind.Null)
                 {
                     rc.patches = new List<Patch>();
                 }
                 else
                 {   
-                    var patches = (from p in o["patches"]
-                                 select new Patch()
-                                 {
-                                     Id = (string)p["id"]
-                                 }).ToList();
+                    var patchesArray = patchesProp.Value;
+                    var patches = new List<Patch>();
+                    
+                    foreach (var patchElem in patchesArray.EnumerateArray())
+                    {
+                        var idProp = TryGetProperty(patchElem, "id");
+                        patches.Add(new Patch()
+                        {
+                            Id = idProp?.GetString()
+                        });
+                    }
+
                     // populate DependsOn
                     foreach(var p in patches)
                     {
-                        var cur = from x in o["patches"]
-                                    from d in x["dependsOn"]
-                                    from a in patches
-                                    where (string)x["id"] == p.Id &&
-                                        a.Id == (string)d
-                                    select a;
-                        p.DependsOn = cur.Distinct(new PatchComparer()).ToList();
-                        //todo: double check this query
-                        var children = from x in o["patches"]
-                                       from d in x["dependsOn"]
-                                       from a in patches
-                                       where (string)d == p.Id && (string)x["id"] == a.Id
-                                       select a;
-                        p.Children = children.Distinct(new PatchComparer()).ToList();
+                        var dependsOnList = new List<Patch>();
+                        
+                        for (int i = 0; i < patchesArray.GetArrayLength(); i++)
+                        {
+                            var patchObj = patchesArray[i];
+                            var idProp = TryGetProperty(patchObj, "id");
+                            var curId = idProp?.GetString();
+
+                            if (curId != p.Id) continue;
+
+                            var dependsOnProp = TryGetProperty(patchObj, "dependsOn");
+                            if (dependsOnProp.HasValue && dependsOnProp.Value.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var depElem in dependsOnProp.Value.EnumerateArray())
+                                {
+                                    var depId = depElem.GetString();
+                                    var matched = patches.Where(a => a.Id == depId).Distinct(new PatchComparer()).ToList();
+                                    dependsOnList.AddRange(matched);
+                                }
+                            }
+                        }
+
+                        p.DependsOn = dependsOnList.Distinct(new PatchComparer()).ToList();
+
+                        // populate Children
+                        var childrenList = new List<Patch>();
+                        
+                        for (int i = 0; i < patchesArray.GetArrayLength(); i++)
+                        {
+                            var patchObj = patchesArray[i];
+                            var idProp = TryGetProperty(patchObj, "id");
+                            var curId = idProp?.GetString();
+
+                            var dependsOnProp = TryGetProperty(patchObj, "dependsOn");
+                            if (dependsOnProp.HasValue && dependsOnProp.Value.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var depElem in dependsOnProp.Value.EnumerateArray())
+                                {
+                                    var depId = depElem.GetString();
+                                    if (depId == p.Id)
+                                    {
+                                        var matched = patches.Where(a => a.Id == curId).Distinct(new PatchComparer()).ToList();
+                                        childrenList.AddRange(matched);
+                                    }
+                                }
+                            }
+                        }
+
+                        p.Children = childrenList.Distinct(new PatchComparer()).ToList();
                     }
-                    rc.patches = patches.ToList();
+
+                    rc.patches = patches;
                 }
             }
             else
@@ -119,27 +248,24 @@ namespace Ormico.DbPatchManager.Logic
             return rc;
         }
 
-        public SchemaMapper.PatchesSchemaVersionEnum DetectSchemaVersion(Newtonsoft.Json.Linq.JObject o)
+        public SchemaMapper.PatchesSchemaVersionEnum DetectSchemaVersion(JsonElement o)
         {
             //todo: write unit tests for this method and SchemaMapper class
             var mapper = new SchemaMapper();
             var rc = SchemaMapper.PatchesSchemaVersionEnum.Unknown;
-            var schemaVersionProperty = o.Property("schema");
-
-            if (schemaVersionProperty != null)
+            
+            if (o.TryGetProperty("schema", out var schemaVersionProperty))
             {
-                if (!string.IsNullOrWhiteSpace((string)schemaVersionProperty.Value))
+                var schemaStr = schemaVersionProperty.GetString();
+                if (!string.IsNullOrWhiteSpace(schemaStr))
                 {
-                    string schemaStr = (string)schemaVersionProperty.Value;
                     rc = mapper.MapSchemaVersion(schemaStr);
                 }
             }
             else
             {
                 // if no schemaVersion property then try to detect if v1 by checking other properties
-                var patchesProperty = o.Property("patches");
-
-                if (patchesProperty != null)
+                if (o.TryGetProperty("patches", out var patchesProperty))
                 {
                     rc = SchemaMapper.PatchesSchemaVersionEnum.DbPatchV1;
                 }
@@ -158,79 +284,135 @@ namespace Ormico.DbPatchManager.Logic
         /// <param name="buildConfiguration"></param>
         public void Write(DatabaseBuildConfiguration buildConfiguration)
         {
-            JObject data;
+            string json;
 
             if (_io.File.Exists(_localFilePath))
             {
-                var localO = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_localFilePath));
-                data = new JObject();
+                using var localDoc = JsonDocument.Parse(_io.File.ReadAllText(_localFilePath));
+                var localO = localDoc.RootElement;
+                
+                var dataObj = new Dictionary<string, string>();
 
                 //todo: find a way to do this that isn't manual. can you loop over all values in buildConfiguration?
-                if (localO["DatabaseType"] == null && buildConfiguration.DatabaseType != null)
+                if (!localO.TryGetProperty("DatabaseType", out _) && buildConfiguration.DatabaseType != null)
                 {
-                    data["DatabaseType"] = buildConfiguration.DatabaseType;
+                    dataObj["DatabaseType"] = JsonSerializer.Serialize(buildConfiguration.DatabaseType, _jsonOptions);
                 }
 
-                if (localO["ConnectionString"] == null && buildConfiguration.ConnectionString != null)
+                if (!localO.TryGetProperty("ConnectionString", out _) && buildConfiguration.ConnectionString != null)
                 {
-                    data["ConnectionString"] = buildConfiguration.ConnectionString;
+                    dataObj["ConnectionString"] = JsonSerializer.Serialize(buildConfiguration.ConnectionString, _jsonOptions);
                 }
 
-                if (localO["CodeFolder"] == null && buildConfiguration.CodeFolder != null)
+                if (!localO.TryGetProperty("CodeFolder", out _) && buildConfiguration.CodeFolder != null)
                 {
-                    data["CodeFolder"] = buildConfiguration.CodeFolder;
+                    dataObj["CodeFolder"] = JsonSerializer.Serialize(buildConfiguration.CodeFolder, _jsonOptions);
                 }
 
-                if (localO["CodeFiles"] == null && buildConfiguration.CodeFiles != null)
+                if (!localO.TryGetProperty("CodeFiles", out _) && buildConfiguration.CodeFiles != null)
                 {
-                    data["CodeFiles"] = JArray.FromObject(buildConfiguration.CodeFiles);
+                    var node = JsonSerializer.SerializeToNode(buildConfiguration.CodeFiles, _jsonOptions);
+                    dataObj["CodeFiles"] = node!.ToJsonString();
                 }
 
-                if (localO["PatchFolder"] == null && buildConfiguration.PatchFolder != null)
+                if (!localO.TryGetProperty("PatchFolder", out _) && buildConfiguration.PatchFolder != null)
                 {
-                    data["PatchFolder"] = buildConfiguration.PatchFolder;
+                    dataObj["PatchFolder"] = JsonSerializer.Serialize(buildConfiguration.PatchFolder, _jsonOptions);
                 }
 
-                if (localO["Options"] == null && buildConfiguration.Options != null)
+                if (!localO.TryGetProperty("Options", out _) && buildConfiguration.Options != null)
                 {
-                    data["Options"] = JArray.FromObject(buildConfiguration.Options);
+                    var optArray = new List<string>();
+                    foreach (var kvp in buildConfiguration.Options)
+                    {
+                        optArray.Add($"{{\"Key\":\"{EscapeJson(kvp.Key)}\",\"Value\":\"{EscapeJson(kvp.Value)}\"}}");
+                    }
+                    dataObj["Options"] = "[" + string.Join(",", optArray) + "]";
                 }
 
-                if (localO["patches"] == null && buildConfiguration.patches != null)
+                if (!localO.TryGetProperty("patches", out _) && buildConfiguration.patches != null)
                 {
-                    data["patches"] = JArray.FromObject(from p in buildConfiguration.patches
-                                      select new
-                                      {
-                                        id = p.Id,
-                                        dependsOn = p.DependsOn != null ? (from d in p.DependsOn
-                                            select d.Id) : null
-                                      });
+                    var patchItems = new List<string>();
+                    foreach (var p in buildConfiguration.patches)
+                    {
+                        var depIds = new List<string>();
+                        if (p.DependsOn != null)
+                        {
+                            foreach (var d in p.DependsOn.Distinct(new PatchComparer()))
+                            {
+                                depIds.Add($"\"{EscapeJson(d.Id)}\"");
+                            }
+                        }
+                        patchItems.Add($"{{\"id\":\"{EscapeJson(p.Id)}\",\"dependsOn\":[{string.Join(",", depIds)}]}}");
+                    }
+                    dataObj["patches"] = "[" + string.Join(",", patchItems) + "]";
                 }
+
+                json = "{" + string.Join(",", dataObj.Select(kvp => $"\"{kvp.Key}\":{kvp.Value}")) + "}";
             }
             else
             {
-                data = JObject.FromObject(new
+                var allProps = new Dictionary<string, string>();
+                
+                if (buildConfiguration.DatabaseType != null)
+                    allProps["DatabaseType"] = JsonSerializer.Serialize(buildConfiguration.DatabaseType, _jsonOptions);
+                
+                if (buildConfiguration.ConnectionString != null)
+                    allProps["ConnectionString"] = JsonSerializer.Serialize(buildConfiguration.ConnectionString, _jsonOptions);
+                
+                if (buildConfiguration.CodeFolder != null)
+                    allProps["CodeFolder"] = JsonSerializer.Serialize(buildConfiguration.CodeFolder, _jsonOptions);
+                
+                if (buildConfiguration.CodeFiles != null)
                 {
-                    DatabaseType = buildConfiguration.DatabaseType,
-                    ConnectionString = buildConfiguration.ConnectionString,
-                    CodeFolder = buildConfiguration.CodeFolder,
-                    CodeFiles = buildConfiguration.CodeFiles,
-                    PatchFolder = buildConfiguration.PatchFolder,
-                    Options = buildConfiguration.Options,
-                    patches = from p in buildConfiguration.patches
-                              select new
-                              {
-                                  id = p.Id,
-                                  dependsOn = p.DependsOn != null?(from d in p.DependsOn.Distinct(new PatchComparer())
-                                              select d.Id):null
-                              }
-                });
+                    var node = JsonSerializer.SerializeToNode(buildConfiguration.CodeFiles, _jsonOptions);
+                    allProps["CodeFiles"] = node!.ToJsonString();
+                }
+                
+                if (buildConfiguration.PatchFolder != null)
+                    allProps["PatchFolder"] = JsonSerializer.Serialize(buildConfiguration.PatchFolder, _jsonOptions);
+                
+                if (buildConfiguration.Options != null)
+                {
+                    var optArray = new List<string>();
+                    foreach (var kvp in buildConfiguration.Options)
+                    {
+                        optArray.Add($"{{\"Key\":\"{EscapeJson(kvp.Key)}\",\"Value\":\"{EscapeJson(kvp.Value)}\"}}");
+                    }
+                    allProps["Options"] = "[" + string.Join(",", optArray) + "]";
+                }
+
+                if (buildConfiguration.patches != null)
+                {
+                    var patchItems = new List<string>();
+                    foreach (var p in buildConfiguration.patches.Distinct(new PatchComparer()))
+                    {
+                        var depIds = new List<string>();
+                        if (p.DependsOn != null)
+                        {
+                            foreach (var d in p.DependsOn.Distinct(new PatchComparer()))
+                            {
+                                depIds.Add($"\"{EscapeJson(d.Id)}\"");
+                            }
+                        }
+                        patchItems.Add($"{{\"id\":\"{EscapeJson(p.Id)}\",\"dependsOn\":[{string.Join(",", depIds)}]}}");
+                    }
+                    allProps["patches"] = "[" + string.Join(",", patchItems) + "]";
+                }
+
+                json = "{" + string.Join(",", allProps.Select(kvp => $"\"{kvp.Key}\":{kvp.Value}")) + "}";
             }
 
             // write all text creates the file if it doesn't exist
             // but it also truncates the file before writing if it does exist
             // so there will be no data left over from the original contents.
-            _io.File.WriteAllText(_filePath, data.ToString());
+            _io.File.WriteAllText(_filePath, json);
+        }
+
+        private static string EscapeJson(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return value;
+            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
     }
 }
