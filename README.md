@@ -2,7 +2,7 @@
 # DB Patch Manager
 Database development tool for change control.
 
-v2 has been updated to .NET Core for cross platform support.
+v2 has been updated to .NET 8 for cross platform support.
 
 DB Patch Manager supports database development across multiple source control branches by tracking the dependencies of each patch and installing them in the correct order. When a developer adds a new patch, that patch depends on all the previous patches recorded in that branch. When branches are merged the `patches.json` file is merged to include all patches and the dependency tree from each branch. 
 
@@ -21,7 +21,7 @@ dbpatch doesn't yet have working distribution package or an msi.
 dbpatch doesn't yet have working distribution packages but can be installed using the included install shell script, or download and view the shell script if you wish to perform the steps manually.
 
 ### Prerequisites
-* .NET 5
+* .NET 8
 * wget
 * unzip
 
@@ -45,9 +45,9 @@ If you wish to install a version other than latest, each Release comes with an i
 ## Create new db project
 ```MyProject> dbpatch init --dbtype sqlserver```
 
-This will create a new project file named `patches.json` and initilize it to the SQL Server plugin.
+This will create a new project file named `patches.json` and initialize it to the SQL Server plugin.
 
-Create a new file named `patches.local.json` When you are a adding files to source control, do not add this file. Open this file in a text editor and add your connecton string something like:
+Create a new file named `patches.local.json`. When you are adding files to source control, do not add this file. Open this file in a text editor and add your connection string something like:
 
 ```
 {

@@ -36,6 +36,12 @@ namespace Ormico.DbPatchManager.Logic
             Load();
         }
 
+        public bool TestConnection()
+        {
+            // TestDatabase is an in-memory mock — always succeeds.
+            return true;
+        }
+
         public void ExecuteDDL(string commandText)
         {
             _testDb.DdlLog.Add(string.Format("ExecuteDDL {0}\n{1}", DateTime.Now, commandText));
