@@ -16,21 +16,28 @@ namespace Ormico.DbPatchManager.Logic
             _configLocalFileName = LocalConfigFile;
             _rand = new Random();
             _io = new FileSystem();
+            _databaseFactory = new PluginManager().LoadDatabasePlugin;
         }
 
         /// <summary>
         /// Testing constructor. This constructor allows setting
-        /// the the Random and FileSystem objects in addition to the normal 
+        /// the Random, FileSystem and database plugin objects in addition to the normal
         /// constructor parameter(s).
         /// </summary>
         /// <param name="ConfigFile"></param>
+        /// <param name="LocalConfigFile"></param>
         /// <param name="Rand"></param>
         /// <param name="Io"></param>
-        public PatchManager(string ConfigFile, Random Rand, IFileSystem Io)
+        /// <param name="DatabaseFactory">Creates the database plugin from the configured DatabaseType.
+        /// Defaults to <see cref="PluginManager.LoadDatabasePlugin"/>.</param>
+        public PatchManager(string ConfigFile, string LocalConfigFile, Random Rand, IFileSystem Io,
+            Func<string, IDatabase> DatabaseFactory = null)
         {
             _configFileName = ConfigFile;
+            _configLocalFileName = LocalConfigFile;
             _rand = Rand;
             _io = Io;
+            _databaseFactory = DatabaseFactory ?? new PluginManager().LoadDatabasePlugin;
         }
 
         DatabaseBuildConfiguration _configuration;
@@ -43,7 +50,8 @@ namespace Ormico.DbPatchManager.Logic
         readonly string _configFileName;
         readonly string _configLocalFileName;
         readonly Random _rand;
-        
+        readonly Func<string, IDatabase> _databaseFactory;
+
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
@@ -51,7 +59,7 @@ namespace Ormico.DbPatchManager.Logic
 
         public void InitConfig(InitOptions Options)
         {
-            var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName);
+            var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName, _io);
             DatabaseBuildConfiguration databaseBuildConfiguration = new DatabaseBuildConfiguration()
             {
                 DatabaseType = Options?.DbType,
@@ -81,7 +89,7 @@ namespace Ormico.DbPatchManager.Logic
             }
             else
             {
-            var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName, _io);
+                var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName, _io);
                 var cfg = cfgWriter.Read();
 
                 // load options
@@ -128,9 +136,7 @@ namespace Ormico.DbPatchManager.Logic
             var first = _configuration.GetFirstPatch();
             if(first != null)
             {
-                PluginManager pm = new PluginManager();
-
-                using (var db = pm.LoadDatabasePlugin(_configuration.DatabaseType))
+                using (var db = _databaseFactory(_configuration.DatabaseType))
                 {
                     db.Connect(dbopt);
                     var installedPatches = db.GetInstalledPatches();
@@ -150,13 +156,29 @@ namespace Ormico.DbPatchManager.Logic
         {
             foreach (var fn in codeFileNames)
             {
+                string sql = _io.File.ReadAllText(fn);
+                if (SqlScriptInspector.IsEmptyOrCommentOnly(sql))
+                {
+                    WriteSkipWarning(fn);
+                    continue;
+                }
+
                 //todo: add log/console output
                 Console.WriteLine($"Installing: {fn}");
-                string sql = _io.File.ReadAllText(fn);
-                if (string.IsNullOrWhiteSpace(sql))
-                    continue;
-                db.ExecuteProgrammabilityScript(sql);
+                try
+                {
+                    db.ExecuteProgrammabilityScript(sql);
+                }
+                catch (Exception ex)
+                {
+                    throw new ApplicationException($"Failed executing '{fn}'.", ex);
+                }
             }
+        }
+
+        static void WriteSkipWarning(string fileName)
+        {
+            Console.WriteLine($"Warning: skipping '{fileName}' because it contains no executable SQL (only whitespace, comments or ';').");
         }
 
         private List<string> GetSortedCodeFileNames(DatabaseBuildConfiguration cfg, DatabaseOptions dbopt)
@@ -260,9 +282,20 @@ namespace Ormico.DbPatchManager.Logic
                                 {
                                     //todo: check file size before reading all text
                                     string sql = _io.File.ReadAllText(file);
-                                    if (string.IsNullOrWhiteSpace(sql))
+                                    if (SqlScriptInspector.IsEmptyOrCommentOnly(sql))
+                                    {
+                                        WriteSkipWarning(file);
                                         continue;
-                                    db.ExecuteDDL(sql);
+                                    }
+
+                                    try
+                                    {
+                                        db.ExecuteDDL(sql);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        throw new ApplicationException($"Failed executing '{file}' in patch '{current.Id}'.", ex);
+                                    }
                                 }
                                 else if (string.Equals(ext, ".js", StringComparison.OrdinalIgnoreCase))
                                 {
@@ -299,22 +332,23 @@ namespace Ormico.DbPatchManager.Logic
             rc.ConnectionString = cfg.ConnectionString;
             rc.AdditionalOptions = cfg.Options;
 
-            if (_io.File.Exists(_io.Path.Combine(ScriptOverridesFolder, AddInstalledPatchFileName)))
-            {
-                rc.AddInstalledPatchSql = _io.File.ReadAllText(_io.Path.Combine(ScriptOverridesFolder, AddInstalledPatchFileName));
-            }
-
-            if (_io.File.Exists(_io.Path.Combine(ScriptOverridesFolder, GetInstalledPatchesFileName)))
-            {
-                rc.GetInstalledPatchesSql = _io.File.ReadAllText(_io.Path.Combine(ScriptOverridesFolder, GetInstalledPatchesFileName));
-            }
-
-            if (_io.File.Exists(_io.Path.Combine(ScriptOverridesFolder, InitPatchTableFileName)))
-            {
-                rc.InitPatchTableSql = _io.File.ReadAllText(_io.Path.Combine(ScriptOverridesFolder, InitPatchTableFileName));
-            }
+            rc.AddInstalledPatchSql = ReadScriptOverride(AddInstalledPatchFileName);
+            rc.GetInstalledPatchesSql = ReadScriptOverride(GetInstalledPatchesFileName);
+            rc.InitPatchTableSql = ReadScriptOverride(InitPatchTableFileName);
 
             return rc;
+        }
+
+        /// <summary>
+        /// Read a script override file if it exists. Contents are not validated here
+        /// because only some plugins use overrides; each plugin validates the ones it needs.
+        /// </summary>
+        /// <param name="fileName">File name within the ScriptOverrides folder.</param>
+        /// <returns>The script text, or null if the override file does not exist.</returns>
+        string ReadScriptOverride(string fileName)
+        {
+            string path = _io.Path.Combine(ScriptOverridesFolder, fileName);
+            return _io.File.Exists(path) ? _io.File.ReadAllText(path) : null;
         }
     }
 }

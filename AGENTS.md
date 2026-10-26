@@ -30,8 +30,10 @@ test(logic): add unit tests for BuildConfigurationWriter
 - XML documentation comments on public APIs
 - Follow Microsoft C# conventions
 
-### Testing (xUnit)
+### Testing (NUnit)
+- NUnit 4 constraint model: `Assert.That(actual, Is.EqualTo(expected))`
 - Naming: `[ClassUnderTest]Tests`, `MethodName_Scenario_ExpectedResult`
+- Use `MockFileSystem` and the `PatchManager` testing constructor (`IFileSystem`, database factory) so tests never touch the real disk or a real database
 - Maintain minimum 80% code coverage
 - Arrange-act-assert structure
 
