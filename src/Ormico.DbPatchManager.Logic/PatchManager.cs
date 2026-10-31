@@ -143,7 +143,6 @@ namespace Ormico.DbPatchManager.Logic
 
                     //todo: if drop-all-sprocs-then-add-back option, then run drop all script
 
-                    //todo: add log/console output
                     InstallPatch(first, db, installedPatches);
 
                     // install code files

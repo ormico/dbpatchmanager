@@ -8,11 +8,13 @@ namespace Ormico.DbPatchManager.Logic.Tests
         [TestCase(null, TestName = "IsEmptyOrCommentOnly_Null_ReturnsTrue")]
         [TestCase("", TestName = "IsEmptyOrCommentOnly_Empty_ReturnsTrue")]
         [TestCase("   \r\n\t  ", TestName = "IsEmptyOrCommentOnly_Whitespace_ReturnsTrue")]
-        [TestCase("﻿​‌‍⁠ ", TestName = "IsEmptyOrCommentOnly_InvisibleCharacters_ReturnsTrue")]
+        // \uFEFF byte order mark, \u200B zero width space, \u200C zero width non-joiner,
+        // \u200D zero width joiner, \u2060 word joiner
+        [TestCase("\uFEFF\u200B\u200C\u200D\u2060 ", TestName = "IsEmptyOrCommentOnly_InvisibleCharacters_ReturnsTrue")]
         [TestCase("-- placeholder", TestName = "IsEmptyOrCommentOnly_LineCommentWithoutNewline_ReturnsTrue")]
         [TestCase("/* TODO */", TestName = "IsEmptyOrCommentOnly_BlockComment_ReturnsTrue")]
         [TestCase("-- a\r\n/* b\r\n c */\r\n  -- d\n", TestName = "IsEmptyOrCommentOnly_MixedComments_ReturnsTrue")]
-        [TestCase("﻿-- removed: replaced by patch 202410250000-0001-fix", TestName = "IsEmptyOrCommentOnly_InvisibleCharacterThenComment_ReturnsTrue")]
+        [TestCase("\uFEFF-- removed: replaced by patch 202410250000-0001-fix", TestName = "IsEmptyOrCommentOnly_InvisibleCharacterThenComment_ReturnsTrue")]
         [TestCase(";", TestName = "IsEmptyOrCommentOnly_SemicolonOnly_ReturnsTrue")]
         [TestCase("-- removed\r\n;\r\n ; ;", TestName = "IsEmptyOrCommentOnly_CommentsAndEmptyStatements_ReturnsTrue")]
         public void IsEmptyOrCommentOnly_NoExecutableContent_ReturnsTrue(string sql)

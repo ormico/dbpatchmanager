@@ -82,10 +82,16 @@ namespace Ormico.DbPatchManager.Logic
 
         /// <summary>
         /// Zero-width and byte order mark characters that char.IsWhiteSpace does not cover.
+        /// Always write these as \u escapes: typed directly into source they cannot be seen
+        /// in review and an editor or formatter could strip them.
         /// </summary>
         static bool IsInvisible(char c)
         {
-            return c == '﻿' || c == '​' || c == '‌' || c == '‍' || c == '⁠';
+            return c == '\uFEFF' || // byte order mark (zero width no-break space)
+                   c == '\u200B' || // zero width space
+                   c == '\u200C' || // zero width non-joiner
+                   c == '\u200D' || // zero width joiner
+                   c == '\u2060';   // word joiner
         }
     }
 }
