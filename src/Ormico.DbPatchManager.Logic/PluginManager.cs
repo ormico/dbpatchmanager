@@ -26,10 +26,25 @@ namespace Ormico.DbPatchManager.Logic
                 rc = new OdbcDatabase();
             }
             else if (string.Equals(PluginType, "SqlDatabase", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(PluginType, "sqlserver", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(PluginType, typeof(SqlServer.SqlDatabase).ToString(), StringComparison.OrdinalIgnoreCase))
+                      string.Equals(PluginType, "sqlserver", StringComparison.OrdinalIgnoreCase))
             {
-                rc = new SqlServer.SqlDatabase();
+                try
+                {
+                    var sqlServerAssembly = Assembly.Load("Ormico.DbPatchManager.SqlServer");
+                    var sqlDbType = sqlServerAssembly.GetType("Ormico.DbPatchManager.SqlServer.SqlDatabase");
+                    if (sqlDbType != null)
+                    {
+                        rc = Activator.CreateInstance(sqlDbType) as IDatabase;
+                    }
+                }
+                catch (FileNotFoundException)
+                {
+                    // SqlServer package not available — will fail later if actually used
+                }
+                catch (FileLoadException)
+                {
+                    // SqlServer package cannot be loaded — will fail later if actually used
+                }
             }
             else
             {
