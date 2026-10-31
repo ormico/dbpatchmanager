@@ -51,6 +51,24 @@ namespace Ormico.DbPatchManager.Logic
             }
         }
 
+        public bool TestConnection()
+        {
+            try
+            {
+                if (_con == null || _con.State != System.Data.ConnectionState.Open)
+                {
+                    _con.Open();
+                }
+                _con.Query<int>("SELECT 1").FirstOrDefault();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Common.DbPatchManagerException(
+                    $"ODBC connection test failed: {ex.Message}", ex);
+            }
+        }
+
         public void ExecuteDDL(string commandText)
         {
             // some ODBC drivers reject scripts with no executable content
