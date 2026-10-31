@@ -10,6 +10,12 @@ namespace Ormico.DbPatchManager.Common
     {
         void Connect(DatabaseOptions Options);
 
+        /// <summary>
+        /// Tests whether the database connection is alive without executing any schema changes.
+        /// </summary>
+        /// <returns>true if the connection succeeds; false otherwise.</returns>
+        bool TestConnection();
+
         void ExecuteDDL(string commandText);
 
         List<InstalledPatchInfo> GetInstalledPatches();
