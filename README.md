@@ -88,5 +88,49 @@ The default list of code file extensions and the order they load is:
 
 Applies all missing patches and runs all code files.
 
+### Empty and comment-only SQL files
+A `.sql` file in a patch or code folder that contains no executable SQL is skipped with a warning instead of being sent to the database. This covers files that are:
+* empty
+* whitespace only, including invisible characters such as a byte order mark or zero-width space
+* only empty statements (`;`)
+* only `--` line comments and `/* */` block comments, or a mix of these
+
+A patch made up entirely of skipped files is still recorded as installed.
+
+Detection is deliberately conservative, so a file with real SQL is never skipped. Anything else is sent to the database plugin unchanged, and how it is handled depends on the database driver. Examples:
+* `# comment` (a comment in MySQL, a syntax error in SQL Server)
+* `/*! ... */` or `/*M! ... */` (executable comments in MySQL and MariaDB)
+* nested `/* /* */ */` or unterminated block comments
+
+How ODBC drivers handle these when the file is sent to the database, tested with SQL Server ODBC Driver 17, ODBC Driver 18 and the legacy "SQL Server" driver, and MySQL ODBC 9.5 against MySQL 8.4. dbpatch skips every row marked *skipped*, so it works the same way on any driver:
+
+| File content | dbpatch | SQL Server | MySQL |
+|---|---|---|---|
+| empty | *skipped* | rejected by .NET before reaching the driver: `CommandText property has not been initialized` | same |
+| whitespace only | *skipped* | accepted | `Query was empty` (1065) |
+| `;` only | *skipped* | accepted | `Query was empty` (1065) |
+| `--` or `/* */` comments only | *skipped* | accepted | accepted |
+| zero-width space or extra byte order mark | *skipped* | byte order mark: syntax error | syntax error (1064) |
+| `# comment` | sent | syntax error (102) | accepted |
+
+If a driver rejects a file that dbpatch did not skip, edit the file so it either contains executable SQL or matches the skipped patterns above.
+
+### Script overrides
+dbpatch looks for override scripts in a `ScriptOverrides` folder in the current directory: `InitPatchTable.sql`, `AddInstalledPatch.sql` and `GetInstalledPatches.sql`. Whether they are used depends on the plugin. The SQL Server plugin uses its own built-in scripts and ignores them. The ODBC plugin requires all three. With ODBC, a missing, empty or comment-only override stops the build with an error naming the file. Skipping `AddInstalledPatch.sql`, for example, would mean patches are never recorded as installed and would run again on every build.
+
+### When a script fails
+The build stops at the first file that fails, and the error names the file and patch. Patches are not run inside a transaction. Patches installed earlier in the same build stay installed. The failing patch is not recorded as installed but may be partly applied, depending on the database. For example:
+* SQL Server checks the whole script for syntax errors first, so a syntax error means nothing in that file ran.
+* MySQL with the ODBC `MULTI_STATEMENTS=1` option runs statements one at a time, so statements before the failing one have already run.
+
+Fix the file and run `dbpatch build` again. If the patch was partly applied, undo the partial change or make the script safe to re-run first.
+
+### Retiring a patch that has already been deployed
+If a bug is found in a patch that has already been applied to some databases, don't delete the patch. Instead:
+1. Replace the contents of its `.sql` files with a comment explaining why, such as `-- removed: replaced by patch 202410250000-0001-fix-orders`.
+2. Add a new patch with the corrected change.
+
+Databases that already ran the old patch skip it and apply the new one. New databases record the old patch as installed without running anything, then apply the new one.
+
 ## Database Plugin
 [SQL Server Plugin](https://github.com/ormico/dbpatchmanager-sqlserver)

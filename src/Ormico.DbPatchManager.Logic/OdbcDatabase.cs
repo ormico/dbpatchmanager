@@ -15,12 +15,9 @@ namespace Ormico.DbPatchManager.Logic
         {
             _option = Options;
 
-            if(Options.AddInstalledPatchSql == null ||
-                Options.GetInstalledPatchesSql == null ||
-                Options.InitPatchTableSql == null)
-            {
-                throw new ApplicationException("ODBC Plugin requires overriding all scripts");
-            }
+            RequireScriptOverride(Options.AddInstalledPatchSql, "AddInstalledPatch.sql");
+            RequireScriptOverride(Options.GetInstalledPatchesSql, "GetInstalledPatches.sql");
+            RequireScriptOverride(Options.InitPatchTableSql, "InitPatchTable.sql");
 
             _con = new OdbcConnection(Options.ConnectionString);
             ExecuteDDL(_option.InitPatchTableSql);
@@ -28,6 +25,23 @@ namespace Ormico.DbPatchManager.Logic
 
         OdbcConnection _con;
         DatabaseOptions _option;
+
+        /// <summary>
+        /// ODBC has no built-in scripts, so every override must exist and contain executable SQL.
+        /// Skipping one is not safe: an empty AddInstalledPatch, for example, would silently
+        /// stop patches from being recorded as installed.
+        /// </summary>
+        static void RequireScriptOverride(string sql, string fileName)
+        {
+            if (sql == null)
+            {
+                throw new ApplicationException($"ODBC Plugin requires overriding all scripts: ScriptOverrides/{fileName} is missing.");
+            }
+            if (SqlScriptInspector.IsEmptyOrCommentOnly(sql))
+            {
+                throw new ApplicationException($"ODBC Plugin requires overriding all scripts: ScriptOverrides/{fileName} is empty or contains only comments.");
+            }
+        }
 
         public void Dispose()
         {
@@ -39,6 +53,11 @@ namespace Ormico.DbPatchManager.Logic
 
         public void ExecuteDDL(string commandText)
         {
+            // some ODBC drivers reject scripts with no executable content
+            if (SqlScriptInspector.IsEmptyOrCommentOnly(commandText))
+            {
+                return;
+            }
             _con.Execute(commandText);
         }
 
