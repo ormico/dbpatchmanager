@@ -66,7 +66,7 @@ namespace Ormico.DbPatchManager.CLI
         {
             int rc = 0;
             PatchManager manager = new PatchManager(_patchFileName, _patchLocalFileName);
-            manager.Build();
+            manager.Build(options.WhatIf);
             return rc;
         }
     }

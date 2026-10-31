@@ -123,10 +123,16 @@ namespace Ormico.DbPatchManager.Logic
             }
         }
 
-        public void Build()
+        public void Build(bool whatIf = false)
         {
             var cfgWriter = new BuildConfigurationWriter(_configFileName, _configLocalFileName, _io);
             _configuration = cfgWriter.Read();
+
+            if (whatIf)
+            {
+                PrintWhatIf();
+                return;
+            }
 
             // load options
             DatabaseOptions dbopt = LoadDatabaseOptions(_configuration);
@@ -148,6 +154,68 @@ namespace Ormico.DbPatchManager.Logic
                     // install code files
                     InstallProgrammability(codeFileNames, db);
                 }
+            }
+        }
+
+        private void PrintWhatIf()
+        {
+            Console.WriteLine("What-If: The following patches and scripts would be applied:");
+            Console.WriteLine();
+
+            var first = _configuration.GetFirstPatch();
+            if (first != null)
+            {
+                HashSet<string> printedPatches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                LinkedList<Patch> graph = new LinkedList<Patch>();
+                graph.AddLast(first);
+                Patch current;
+
+                while (graph.Any())
+                {
+                    current = graph.First.Value;
+                    graph.RemoveFirst();
+
+                    if (!printedPatches.Contains(current.Id))
+                    {
+                        printedPatches.Add(current.Id);
+                        Console.WriteLine(current.Id);
+
+                        string folder = _io.Path.Combine(_configuration.PatchFolder, current.Id);
+                        if (_io.Directory.Exists(folder))
+                        {
+                            var files = _io.Directory.GetFiles(folder).OrderBy(s => s);
+                            foreach (var file in files)
+                            {
+                                Console.WriteLine(file);
+                            }
+                        }
+
+                        foreach (var c in current.Children)
+                        {
+                            if (!printedPatches.Contains(c.Id))
+                            {
+                                graph.AddLast(c);
+                            }
+                        }
+                    }
+
+                    if (current.DependsOn != null)
+                    {
+                        foreach (var dep in current.DependsOn)
+                        {
+                            if (!printedPatches.Contains(dep.Id))
+                            {
+                                graph.AddFirst(dep);
+                            }
+                        }
+                    }
+                }
+            }
+
+            List<string> codeFileNames = GetSortedCodeFileNames(_configuration, new DatabaseOptions());
+            foreach (var fn in codeFileNames)
+            {
+                Console.WriteLine(fn);
             }
         }
 
