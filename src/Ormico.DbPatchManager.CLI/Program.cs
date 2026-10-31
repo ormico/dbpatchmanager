@@ -7,7 +7,7 @@ namespace Ormico.DbPatchManager.CLI
 {
     class Program
     {
-        static int Main(string[] args)
+        internal static int Main(string[] args)
         {
             int rc = 0;
             try
@@ -17,7 +17,8 @@ namespace Ormico.DbPatchManager.CLI
                         (InitCmdLineOptions o) => InitBuildSettings(o),
                         (AddPatchCmdLineOptions o) => AddPatch(o),
                         (BuildCmdLineOptions o) => Build(o),
-                        err => 1
+                        // help and version requests are reported as errors by the parser but are not failures
+                        errs => errs.IsHelp() || errs.IsVersion() ? 0 : 1
                     );
             }
             catch (Exception ex)
