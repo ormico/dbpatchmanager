@@ -163,7 +163,6 @@ namespace Ormico.DbPatchManager.Logic
                     continue;
                 }
 
-                //todo: add log/console output
                 Console.WriteLine($"Installing: {fn}");
                 try
                 {
