@@ -46,6 +46,9 @@
     <ProjectReference Include="..\Ormico.DbPatchManager.Logic\Ormico.DbPatchManager.Logic.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Ormico.DbPatchManager.CLI.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\..\LICENSE">
       <Pack>True</Pack>
       <PackagePath>

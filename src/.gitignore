@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# dbpatch CLI local build output
+Ormico.DbPatchManager.CLI/out/
