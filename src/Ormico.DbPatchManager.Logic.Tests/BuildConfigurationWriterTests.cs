@@ -293,6 +293,49 @@ namespace Ormico.DbPatchManager.Logic.Tests
         }
 
         [Test]
+        public void Read_WhenMainFileRepeatsKey_UsesLastValue()
+        {
+            var bcw = WriterFor(@"{""CodeFolder"":""first"",""CodeFolder"":""last"",""patches"":[]}");
+
+            var result = bcw.Read();
+
+            Assert.That(result.CodeFolder, Is.EqualTo("last"));
+        }
+
+        [Test]
+        public void Read_WhenNestedObjectRepeatsKey_UsesLastValue()
+        {
+            var bcw = WriterFor(@"{""patches"":[{""id"":""first"",""id"":""last"",""dependsOn"":[]}],""Options"":{""a"":""first"",""a"":""last""}}");
+
+            var result = bcw.Read();
+
+            Assert.That(result.Options["a"], Is.EqualTo("last"));
+            Assert.That(result.patches[0].Id, Is.EqualTo("last"));
+        }
+
+        [Test]
+        public void Read_WhenLocalFileRepeatsKey_UsesLastValue()
+        {
+            var bcw = WriterFor(patchesJson, @"{""ConnectionString"":""first"",""ConnectionString"":""last""}");
+
+            var result = bcw.Read();
+
+            Assert.That(result.ConnectionString, Is.EqualTo("last"));
+        }
+
+        [Test]
+        public void Write_WhenLocalFileRepeatsKey_OmitsItFromMainFile()
+        {
+            var fileSystem = FileSystemFor(patchesJson, @"{""ConnectionString"":""first"",""ConnectionString"":""last""}");
+            var bcw = new BuildConfigurationWriter(MainPath, LocalPath, fileSystem);
+            var config = bcw.Read();
+
+            bcw.Write(config);
+
+            Assert.That(fileSystem.File.ReadAllText(MainPath), Does.Not.Contain("ConnectionString"));
+        }
+
+        [Test]
         public void Read_WhenLocalFileHasComments_Merges()
         {
             var bcw = WriterFor(patchesJson, @"{

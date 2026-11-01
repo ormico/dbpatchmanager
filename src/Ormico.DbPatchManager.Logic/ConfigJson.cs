@@ -36,7 +36,8 @@ namespace Ormico.DbPatchManager.Logic
         {
             try
             {
-                if (JsonNode.Parse(json, documentOptions: _documentOptions) is JsonObject rc)
+                using var document = JsonDocument.Parse(json, _documentOptions);
+                if (ToNode(document.RootElement) is JsonObject rc)
                 {
                     return rc;
                 }
@@ -47,6 +48,33 @@ namespace Ormico.DbPatchManager.Logic
             }
 
             throw new DbPatchManagerException($"{fileName} is not a valid JSON object: the root value must be an object.");
+        }
+
+        // JsonNode.Parse builds objects on first use and throws then if a name is repeated.
+        // Building them here means the last value of a repeated name wins, as it did with Json.NET.
+        private static JsonNode ToNode(JsonElement element)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    var o = new JsonObject();
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        o[property.Name] = ToNode(property.Value);
+                    }
+                    return o;
+                case JsonValueKind.Array:
+                    var a = new JsonArray();
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        a.Add(ToNode(item));
+                    }
+                    return a;
+                case JsonValueKind.Null:
+                    return null;
+                default:
+                    return JsonValue.Create(element.Clone());
+            }
         }
 
         /// <summary>
