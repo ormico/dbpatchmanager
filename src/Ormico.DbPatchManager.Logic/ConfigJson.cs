@@ -44,7 +44,9 @@ namespace Ormico.DbPatchManager.Logic
             }
             catch (JsonException ex)
             {
-                throw new DbPatchManagerException($"{fileName} is not a valid JSON object: {ex.Message}", ex);
+                // JsonException.Message can include the file contents, which may hold a connection string.
+                // Don't pass ex as the inner exception because the CLI prints the inner exception message.
+                throw new DbPatchManagerException($"{fileName} is not a valid JSON object: invalid JSON at line {ex.LineNumber + 1}, position {ex.BytePositionInLine + 1}.");
             }
 
             throw new DbPatchManagerException($"{fileName} is not a valid JSON object: the root value must be an object.");

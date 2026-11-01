@@ -27,6 +27,27 @@ namespace Ormico.DbPatchManager.Logic.Tests
             Assert.That(ex.Message, Does.Contain("patches.json"));
         }
 
+        [TestCase("{ \"Flag\": tru,\n \"ConnectionString\": \"Password=SuperSecret123;\" }")]
+        [TestCase("{ \"Flag\": fals,\n \"ConnectionString\": \"Password=SuperSecret123;\" }")]
+        [TestCase("{ \"Flag\": nul,\n \"ConnectionString\": \"Password=SuperSecret123;\" }")]
+        [TestCase("{ \"ConnectionString\": tcp:server;Password=SuperSecret123; }")]
+        [TestCase("{ \"ConnectionString\": \"Password=SuperSecret123;")]
+        public void ParseObject_WhenInvalid_DoesNotExposeFileContents(string json)
+        {
+            var ex = Assert.Throws<DbPatchManagerException>(() => ConfigJson.ParseObject(json, "patches.local.json"));
+
+            Assert.That(ex.Message, Does.Not.Contain("SuperSecret123"));
+            Assert.That(ex.InnerException?.Message ?? "", Does.Not.Contain("SuperSecret123"));
+        }
+
+        [Test]
+        public void ParseObject_WhenInvalid_ReportsLineOfError()
+        {
+            var ex = Assert.Throws<DbPatchManagerException>(() => ConfigJson.ParseObject("{\n  \"Flag\": tru\n}", "patches.json"));
+
+            Assert.That(ex.Message, Does.Contain("line 2"));
+        }
+
         [Test]
         public void Merge_WhenKeyNeedsEscaping_MergesWithoutError()
         {
