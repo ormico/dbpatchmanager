@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -14,10 +15,19 @@ namespace Ormico.DbPatchManager.Logic
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
-        FileSystem _io = new FileSystem();
+        IFileSystem _io;
 
         string _fileName;
         TestDb _testDb;
+
+        public TestDatabase() : this(new FileSystem())
+        {
+        }
+
+        internal TestDatabase(IFileSystem fileSystem)
+        {
+            _io = fileSystem;
+        }
 
         public void Connect(DatabaseOptions Options)
         {
@@ -94,8 +104,10 @@ namespace Ormico.DbPatchManager.Logic
                 DdlLog = new List<string>();
             }
 
+            [JsonInclude]
             public List<InstalledPatchInfo> InstalledPatches { get; protected set; }
 
+            [JsonInclude]
             public List<string> DdlLog { get; protected set; }
         }
     }

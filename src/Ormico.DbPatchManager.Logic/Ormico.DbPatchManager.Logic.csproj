@@ -34,6 +34,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Ormico.DbPatchManager.Logic.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Ormico.DbPatchManager.Common\Ormico.DbPatchManager.Common.csproj" />
   </ItemGroup>
 </Project>
