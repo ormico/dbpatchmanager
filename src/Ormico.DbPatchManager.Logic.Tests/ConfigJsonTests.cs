@@ -62,7 +62,7 @@ namespace Ormico.DbPatchManager.Logic.Tests
         public void Merge_WhenArraysOverlapWithDifferentEscapesOrKeyOrder_UnionsWithoutDuplicates()
         {
             var main = Obj(@"{""CodeFiles"":[""*.view.sql""],""patches"":[{""id"":""p1"",""dependsOn"":[]}]}");
-            var local = Obj(@"{""CodeFiles"":[""*.view.sql"",""*.udf.sql""],""patches"":[{ ""dependsOn"" : [ ], ""id"":""p1""}]}");
+            var local = Obj(@"{""CodeFiles"":[""\u002A.view.sql"",""*.udf.sql""],""patches"":[{ ""dependsOn"" : [ ], ""id"":""p1""}]}");
 
             ConfigJson.Merge(main, local);
 
