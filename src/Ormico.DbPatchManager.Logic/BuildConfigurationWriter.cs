@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ormico.DbPatchManager.Common;
 
@@ -13,13 +12,6 @@ namespace Ormico.DbPatchManager.Logic
     /// </summary>
     public class BuildConfigurationWriter
     {
-        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = null,
-            WriteIndented = false,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never
-        };
-
         /// <summary>
         /// 
         /// </summary>
@@ -251,135 +243,96 @@ namespace Ormico.DbPatchManager.Logic
         /// <param name="buildConfiguration"></param>
         public void Write(DatabaseBuildConfiguration buildConfiguration)
         {
-            string json;
-
+            JsonObject local = null;
             if (_io.File.Exists(_localFilePath))
             {
-                using var localDoc = JsonDocument.Parse(_io.File.ReadAllText(_localFilePath));
-                var localO = localDoc.RootElement;
-                
-                var dataObj = new Dictionary<string, string>();
-
-                //todo: find a way to do this that isn't manual. can you loop over all values in buildConfiguration?
-                if (!localO.TryGetProperty("DatabaseType", out _) && buildConfiguration.DatabaseType != null)
-                {
-                    dataObj["DatabaseType"] = JsonSerializer.Serialize(buildConfiguration.DatabaseType, _jsonOptions);
-                }
-
-                if (!localO.TryGetProperty("ConnectionString", out _) && buildConfiguration.ConnectionString != null)
-                {
-                    dataObj["ConnectionString"] = JsonSerializer.Serialize(buildConfiguration.ConnectionString, _jsonOptions);
-                }
-
-                if (!localO.TryGetProperty("CodeFolder", out _) && buildConfiguration.CodeFolder != null)
-                {
-                    dataObj["CodeFolder"] = JsonSerializer.Serialize(buildConfiguration.CodeFolder, _jsonOptions);
-                }
-
-                if (!localO.TryGetProperty("CodeFiles", out _) && buildConfiguration.CodeFiles != null)
-                {
-                    var node = JsonSerializer.SerializeToNode(buildConfiguration.CodeFiles, _jsonOptions);
-                    dataObj["CodeFiles"] = node!.ToJsonString();
-                }
-
-                if (!localO.TryGetProperty("PatchFolder", out _) && buildConfiguration.PatchFolder != null)
-                {
-                    dataObj["PatchFolder"] = JsonSerializer.Serialize(buildConfiguration.PatchFolder, _jsonOptions);
-                }
-
-                if (!localO.TryGetProperty("Options", out _) && buildConfiguration.Options != null)
-                {
-                    var optArray = new List<string>();
-                    foreach (var kvp in buildConfiguration.Options)
-                    {
-                        optArray.Add($"{{\"Key\":\"{EscapeJson(kvp.Key)}\",\"Value\":\"{EscapeJson(kvp.Value)}\"}}");
-                    }
-                    dataObj["Options"] = "[" + string.Join(",", optArray) + "]";
-                }
-
-                if (!localO.TryGetProperty("patches", out _) && buildConfiguration.patches != null)
-                {
-                    var patchItems = new List<string>();
-                    foreach (var p in buildConfiguration.patches)
-                    {
-                        var depIds = new List<string>();
-                        if (p.DependsOn != null)
-                        {
-                            foreach (var d in p.DependsOn.Distinct(new PatchComparer()))
-                            {
-                                depIds.Add($"\"{EscapeJson(d.Id)}\"");
-                            }
-                        }
-                        patchItems.Add($"{{\"id\":\"{EscapeJson(p.Id)}\",\"dependsOn\":[{string.Join(",", depIds)}]}}");
-                    }
-                    dataObj["patches"] = "[" + string.Join(",", patchItems) + "]";
-                }
-
-                json = "{" + string.Join(",", dataObj.Select(kvp => $"\"{kvp.Key}\":{kvp.Value}")) + "}";
+                local = ConfigJson.ParseObject(_io.File.ReadAllText(_localFilePath), _localFilePath);
             }
-            else
-            {
-                var allProps = new Dictionary<string, string>();
-                
-                if (buildConfiguration.DatabaseType != null)
-                    allProps["DatabaseType"] = JsonSerializer.Serialize(buildConfiguration.DatabaseType, _jsonOptions);
-                
-                if (buildConfiguration.ConnectionString != null)
-                    allProps["ConnectionString"] = JsonSerializer.Serialize(buildConfiguration.ConnectionString, _jsonOptions);
-                
-                if (buildConfiguration.CodeFolder != null)
-                    allProps["CodeFolder"] = JsonSerializer.Serialize(buildConfiguration.CodeFolder, _jsonOptions);
-                
-                if (buildConfiguration.CodeFiles != null)
-                {
-                    var node = JsonSerializer.SerializeToNode(buildConfiguration.CodeFiles, _jsonOptions);
-                    allProps["CodeFiles"] = node!.ToJsonString();
-                }
-                
-                if (buildConfiguration.PatchFolder != null)
-                    allProps["PatchFolder"] = JsonSerializer.Serialize(buildConfiguration.PatchFolder, _jsonOptions);
-                
-                if (buildConfiguration.Options != null)
-                {
-                    var optArray = new List<string>();
-                    foreach (var kvp in buildConfiguration.Options)
-                    {
-                        optArray.Add($"{{\"Key\":\"{EscapeJson(kvp.Key)}\",\"Value\":\"{EscapeJson(kvp.Value)}\"}}");
-                    }
-                    allProps["Options"] = "[" + string.Join(",", optArray) + "]";
-                }
 
-                if (buildConfiguration.patches != null)
-                {
-                    var patchItems = new List<string>();
-                    foreach (var p in buildConfiguration.patches.Distinct(new PatchComparer()))
-                    {
-                        var depIds = new List<string>();
-                        if (p.DependsOn != null)
-                        {
-                            foreach (var d in p.DependsOn.Distinct(new PatchComparer()))
-                            {
-                                depIds.Add($"\"{EscapeJson(d.Id)}\"");
-                            }
-                        }
-                        patchItems.Add($"{{\"id\":\"{EscapeJson(p.Id)}\",\"dependsOn\":[{string.Join(",", depIds)}]}}");
-                    }
-                    allProps["patches"] = "[" + string.Join(",", patchItems) + "]";
-                }
-
-                json = "{" + string.Join(",", allProps.Select(kvp => $"\"{kvp.Key}\":{kvp.Value}")) + "}";
-            }
+            var data = BuildDocument(buildConfiguration, local);
 
             // write all text creates the file if it doesn't exist
             // but it also truncates the file before writing if it does exist
             // so there will be no data left over from the original contents.
-            _io.File.WriteAllText(_filePath, json);
+            _io.File.WriteAllText(_filePath, ConfigJson.Serialize(data));
         }
 
-        private static string EscapeJson(string value)
+        /// <summary>
+        /// Create the contents of the main file.
+        /// </summary>
+        /// <param name="config">Configuration to write.</param>
+        /// <param name="local">Contents of the local file, or null if there is no local file.</param>
+        private static JsonObject BuildDocument(DatabaseBuildConfiguration config, JsonObject local)
         {
-            if (string.IsNullOrEmpty(value)) return value;
-            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            var rc = new JsonObject();
+
+            void Add(string name, JsonNode value)
+            {
+                if (local == null || (!local.ContainsKey(name) && value != null))
+                {
+                    rc[name] = value;
+                }
+            }
+
+            //todo: find a way to do this that isn't manual. can you loop over all values in buildConfiguration?
+            Add("DatabaseType", config.DatabaseType);
+            Add("ConnectionString", config.ConnectionString);
+            Add("CodeFolder", config.CodeFolder);
+            Add("CodeFiles", ToJsonArray(config.CodeFiles));
+            Add("PatchFolder", config.PatchFolder);
+            Add("Options", ToJsonObject(config.Options));
+            Add("patches", ToJsonArray(config.patches));
+
+            return rc;
+        }
+
+        private static JsonArray ToJsonArray(IEnumerable<string> values)
+        {
+            if (values == null)
+            {
+                return null;
+            }
+
+            var rc = new JsonArray();
+            foreach (var value in values)
+            {
+                rc.Add(JsonValue.Create(value));
+            }
+            return rc;
+        }
+
+        private static JsonObject ToJsonObject(Dictionary<string, string> values)
+        {
+            if (values == null)
+            {
+                return null;
+            }
+
+            var rc = new JsonObject();
+            foreach (var kvp in values)
+            {
+                rc[kvp.Key] = kvp.Value;
+            }
+            return rc;
+        }
+
+        private static JsonArray ToJsonArray(IEnumerable<Patch> patches)
+        {
+            if (patches == null)
+            {
+                return null;
+            }
+
+            var rc = new JsonArray();
+            foreach (var p in patches.Distinct(new PatchComparer()))
+            {
+                rc.Add(new JsonObject
+                {
+                    ["id"] = p.Id,
+                    ["dependsOn"] = ToJsonArray(p.DependsOn?.Distinct(new PatchComparer()).Select(d => d.Id))
+                });
+            }
+            return rc;
         }
     }
 }

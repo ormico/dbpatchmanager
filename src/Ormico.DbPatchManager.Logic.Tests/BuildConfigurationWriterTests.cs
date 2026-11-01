@@ -229,12 +229,7 @@ namespace Ormico.DbPatchManager.Logic.Tests
 
         static BuildConfigurationWriter WriterFor(string mainJson, string localJson = null)
         {
-            var files = new Dictionary<string, MockFileData> { { MainPath, new MockFileData(mainJson) } };
-            if (localJson != null)
-            {
-                files.Add(LocalPath, new MockFileData(localJson));
-            }
-            return new BuildConfigurationWriter(MainPath, LocalPath, new MockFileSystem(files));
+            return new BuildConfigurationWriter(MainPath, LocalPath, FileSystemFor(mainJson, localJson));
         }
 
         [Test]
@@ -308,6 +303,128 @@ namespace Ormico.DbPatchManager.Logic.Tests
             var result = bcw.Read();
 
             Assert.That(result.ConnectionString, Is.EqualTo("Server=dev;"));
+        }
+
+        const string newtonsoftFile = @"{
+  ""DatabaseType"": ""sqlserver"",
+  ""ConnectionString"": null,
+  ""CodeFolder"": ""Code"",
+  ""CodeFiles"": [
+    ""*.view.sql""
+  ],
+  ""PatchFolder"": ""Patches"",
+  ""Options"": null,
+  ""patches"": [
+    {
+      ""id"": ""p1"",
+      ""dependsOn"": []
+    },
+    {
+      ""id"": ""p2"",
+      ""dependsOn"": [
+        ""p1""
+      ]
+    }
+  ]
+}";
+
+        static MockFileSystem FileSystemFor(string mainJson, string localJson = null)
+        {
+            var files = new Dictionary<string, MockFileData> { { MainPath, new MockFileData(mainJson) } };
+            if (localJson != null)
+            {
+                files.Add(LocalPath, new MockFileData(localJson));
+            }
+            return new MockFileSystem(files);
+        }
+
+        static string Normalize(string text) => text.Replace("\r\n", "\n");
+
+        [TestCase(null)]
+        [TestCase(@"{""ConnectionString"":""x""}")]
+        public void Write_ThenRead_WithOptions_RoundTrips(string localJson)
+        {
+            var fileSystem = FileSystemFor(patchesJson, localJson);
+            var bcw = new BuildConfigurationWriter(MainPath, LocalPath, fileSystem);
+            var config = bcw.Read();
+            config.Options = new Dictionary<string, string> { { "CommandTimeout", "30" } };
+
+            bcw.Write(config);
+            bcw.Write(bcw.Read());
+            var result = bcw.Read();
+
+            Assert.That(result.Options["CommandTimeout"], Is.EqualTo("30"));
+            Assert.That(fileSystem.File.ReadAllText(MainPath), Does.Contain(@"""Options"": {"));
+        }
+
+        [Test]
+        public void Write_WithControlCharactersInValues_ProducesValidJson()
+        {
+            const string script = "line1\nline2\t\"q\"\\";
+            const string patchId = "patch\tone";
+            var bcw = WriterFor(patchesJson);
+            var config = bcw.Read();
+            config.Options = new Dictionary<string, string> { { "Script", script } };
+            config.patches = new List<Patch> { new Patch(patchId, new List<Patch>()) };
+
+            bcw.Write(config);
+            var result = bcw.Read();
+
+            Assert.That(result.Options["Script"], Is.EqualTo(script));
+            Assert.That(result.patches[0].Id, Is.EqualTo(patchId));
+        }
+
+        [Test]
+        public void Write_WithSpecialCharacters_WritesReadableJson()
+        {
+            const string connectionString = "Server=a;Pwd=x&y+z<1>;Name=Zoë";
+            var fileSystem = FileSystemFor(patchesJson);
+            var bcw = new BuildConfigurationWriter(MainPath, LocalPath, fileSystem);
+            var config = bcw.Read();
+            config.ConnectionString = connectionString;
+
+            bcw.Write(config);
+
+            Assert.That(fileSystem.File.ReadAllText(MainPath), Does.Contain(connectionString));
+        }
+
+        [Test]
+        public void Write_RoundTripOfNewtonsoftFile_IsUnchanged()
+        {
+            var fileSystem = FileSystemFor(newtonsoftFile);
+            var bcw = new BuildConfigurationWriter(MainPath, LocalPath, fileSystem);
+
+            bcw.Write(bcw.Read());
+
+            Assert.That(Normalize(fileSystem.File.ReadAllText(MainPath)), Is.EqualTo(Normalize(newtonsoftFile)));
+        }
+
+        [Test]
+        public void Write_WhenLocalFileHasKey_OmitsItFromMainFile()
+        {
+            var fileSystem = FileSystemFor(patchesJson, @"{""ConnectionString"":null}");
+            var bcw = new BuildConfigurationWriter(MainPath, LocalPath, fileSystem);
+            var config = bcw.Read();
+            config.ConnectionString = "secret";
+
+            bcw.Write(config);
+
+            Assert.That(fileSystem.File.ReadAllText(MainPath), Does.Not.Contain("ConnectionString"));
+        }
+
+        [TestCase(null)]
+        [TestCase("{ }")]
+        public void Write_WithDuplicatePatches_WritesEachIdOnce(string localJson)
+        {
+            var fileSystem = FileSystemFor(patchesJson, localJson);
+            var bcw = new BuildConfigurationWriter(MainPath, LocalPath, fileSystem);
+            var config = bcw.Read();
+            config.patches = new List<Patch> { new Patch("p1", new List<Patch>()), new Patch("p1", new List<Patch>()) };
+
+            bcw.Write(config);
+
+            var patches = System.Text.Json.Nodes.JsonNode.Parse(fileSystem.File.ReadAllText(MainPath))["patches"].AsArray();
+            Assert.That(patches.Count, Is.EqualTo(1));
         }
     }
 }
