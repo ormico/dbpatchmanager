@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -16,12 +15,11 @@ namespace Ormico.DbPatchManager.Logic
             this.DependsOn = DependsOn;
         }
 
-        [JsonPropertyName("id")] public string Id { get; /* protected */ set; }
+        public string Id { get; /* protected */ set; }
 
-        [JsonPropertyName("dependsOn")]
         public List<Patch> DependsOn { get; /* protected */ set; }
 
-        [JsonIgnore] public List<Patch> Children { get; /* protected */ set; }
+        public List<Patch> Children { get; /* protected */ set; }
     }
 
     public class PatchComparer : IEqualityComparer<Patch>
