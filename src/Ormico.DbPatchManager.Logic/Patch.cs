@@ -1,10 +1,8 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Ormico.DbPatchManager.Logic
 {
-    [JsonObject(IsReference = true)]
     public class Patch
     {
         public Patch()
@@ -17,14 +15,11 @@ namespace Ormico.DbPatchManager.Logic
             this.DependsOn = DependsOn;
         }
 
-        //todo: constructor for json.net
+        public string Id { get; /* protected */ set; }
 
-        [JsonProperty("id")] public string Id { get; /* protected */ set; }
-
-        [JsonProperty("dependsOn", ItemIsReference = true)]
         public List<Patch> DependsOn { get; /* protected */ set; }
 
-        [JsonIgnore] public List<Patch> Children { get; /* protected */ set; }
+        public List<Patch> Children { get; /* protected */ set; }
     }
 
     public class PatchComparer : IEqualityComparer<Patch>

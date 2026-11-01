@@ -18,7 +18,6 @@
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.24" />
     <PackageReference Include="Ormico.DbPatchManager.SqlServer" Version="2.2.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Data.Odbc" Version="8.0.0" />
     <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="19.2.87" />
   </ItemGroup>
@@ -33,6 +32,9 @@
       <PackagePath>
       </PackagePath>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ormico.DbPatchManager.Logic.Tests" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ormico.DbPatchManager.Common\Ormico.DbPatchManager.Common.csproj" />

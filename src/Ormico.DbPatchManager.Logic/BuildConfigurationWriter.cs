@@ -1,10 +1,9 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Ormico.DbPatchManager.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
+using System.Text.Json.Nodes;
+using Ormico.DbPatchManager.Common;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -54,7 +53,7 @@ namespace Ormico.DbPatchManager.Logic
             DatabaseBuildConfiguration rc = null;
             if(_io.File.Exists(_filePath))
             {
-                var o = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_filePath));
+                var o = ConfigJson.ParseObject(_io.File.ReadAllText(_filePath), _filePath);
 
                 var schemaVer = DetectSchemaVersion(o);
                 if (schemaVer == SchemaMapper.PatchesSchemaVersionEnum.Unknown)
@@ -62,55 +61,21 @@ namespace Ormico.DbPatchManager.Logic
 
                 if (_io.File.Exists(_localFilePath))
                 {
-                    var localO = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_localFilePath));
-                    o.Merge(localO, new JsonMergeSettings()
-                    {
-                        MergeArrayHandling = MergeArrayHandling.Union
-                    });
+                    ConfigJson.Merge(o, ConfigJson.ParseObject(_io.File.ReadAllText(_localFilePath), _localFilePath));
                 }
 
                 rc = new DatabaseBuildConfiguration();
-                rc.CodeFolder = (string)o["CodeFolder"];
-                rc.CodeFiles = o["CodeFiles"].ToObject<List<string>>();
-                rc.ConnectionString = (string)o["ConnectionString"];
-                rc.DatabaseType = (string)o["DatabaseType"];
-                rc.PatchFolder = (string)o["PatchFolder"];
+                rc.CodeFolder = ConfigJson.ReadString(o["CodeFolder"], "CodeFolder");
+                rc.CodeFiles = ReadCodeFiles(o["CodeFiles"]);
+                rc.ConnectionString = ConfigJson.ReadString(o["ConnectionString"], "ConnectionString");
+                rc.DatabaseType = ConfigJson.ReadString(o["DatabaseType"], "DatabaseType");
+                rc.PatchFolder = ConfigJson.ReadString(o["PatchFolder"], "PatchFolder");
 
                 // options specific to a database plugin
-                rc.Options = o["Options"]?.ToObject<Dictionary<string, string>>();
+                rc.Options = ReadOptions(o["Options"]);
 
                 // populate patch list
-                if (o["patches"] == null)
-                {
-                    rc.patches = new List<Patch>();
-                }
-                else
-                {   
-                    var patches = (from p in o["patches"]
-                                 select new Patch()
-                                 {
-                                     Id = (string)p["id"]
-                                 }).ToList();
-                    // populate DependsOn
-                    foreach(var p in patches)
-                    {
-                        var cur = from x in o["patches"]
-                                    from d in x["dependsOn"]
-                                    from a in patches
-                                    where (string)x["id"] == p.Id &&
-                                        a.Id == (string)d
-                                    select a;
-                        p.DependsOn = cur.Distinct(new PatchComparer()).ToList();
-                        //todo: double check this query
-                        var children = from x in o["patches"]
-                                       from d in x["dependsOn"]
-                                       from a in patches
-                                       where (string)d == p.Id && (string)x["id"] == a.Id
-                                       select a;
-                        p.Children = children.Distinct(new PatchComparer()).ToList();
-                    }
-                    rc.patches = patches.ToList();
-                }
+                rc.patches = ReadPatches(o["patches"]);
             }
             else
             {
@@ -119,27 +84,147 @@ namespace Ormico.DbPatchManager.Logic
             return rc;
         }
 
-        public SchemaMapper.PatchesSchemaVersionEnum DetectSchemaVersion(Newtonsoft.Json.Linq.JObject o)
+        private static List<string> ReadCodeFiles(JsonNode node)
+        {
+            if (node == null)
+            {
+                return new List<string>();
+            }
+
+            if (node is not JsonArray array)
+            {
+                throw new DbPatchManagerException("'CodeFiles' must be an array.");
+            }
+
+            return array.Select(f => ConfigJson.ReadString(f, "CodeFiles")).ToList();
+        }
+
+        private static Dictionary<string, string> ReadOptions(JsonNode node)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            if (node is not JsonObject options)
+            {
+                throw new DbPatchManagerException("'Options' must be an object.");
+            }
+
+            return options.ToDictionary(p => p.Key, p => ConfigJson.ReadString(p.Value, p.Key));
+        }
+
+        private static List<Patch> ReadPatches(JsonNode node)
+        {
+            var patches = new List<Patch>();
+            if (node == null)
+            {
+                return patches;
+            }
+
+            if (node is not JsonArray array)
+            {
+                throw new DbPatchManagerException("'patches' must be an array.");
+            }
+
+            // if an id is repeated then the first Patch is the one other patches link to
+            var patchesById = new Dictionary<string, Patch>(StringComparer.Ordinal);
+            var dependsOnById = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+            foreach (var item in array)
+            {
+                if (item is not JsonObject patchObject)
+                {
+                    throw new DbPatchManagerException("'patches' must contain only objects.");
+                }
+
+                var patch = new Patch()
+                {
+                    Id = ConfigJson.ReadString(patchObject["id"], "id")
+                };
+                patches.Add(patch);
+
+                if (patch.Id != null)
+                {
+                    patchesById.TryAdd(patch.Id, patch);
+                    dependsOnById.TryAdd(patch.Id, new List<string>());
+                    dependsOnById[patch.Id].AddRange(ReadDependsOn(patchObject["dependsOn"]));
+                }
+            }
+
+            var childrenById = new Dictionary<string, List<Patch>>(StringComparer.Ordinal);
+            foreach (var (id, dependsOn) in dependsOnById)
+            {
+                foreach (var dependsOnId in dependsOn.Where(patchesById.ContainsKey))
+                {
+                    childrenById.TryAdd(dependsOnId, new List<Patch>());
+                    childrenById[dependsOnId].Add(patchesById[id]);
+                }
+            }
+
+            foreach (var p in patches)
+            {
+                p.DependsOn = new List<Patch>();
+                p.Children = new List<Patch>();
+
+                if (p.Id != null)
+                {
+                    p.DependsOn = dependsOnById[p.Id].Where(patchesById.ContainsKey).Select(d => patchesById[d])
+                        .Distinct(new PatchComparer()).ToList();
+
+                    if (childrenById.TryGetValue(p.Id, out var children))
+                    {
+                        p.Children = children.Distinct(new PatchComparer()).ToList();
+                    }
+                }
+            }
+
+            return patches;
+        }
+
+        private static List<string> ReadDependsOn(JsonNode node)
+        {
+            if (node == null)
+            {
+                return new List<string>();
+            }
+
+            if (node is not JsonArray array)
+            {
+                throw new DbPatchManagerException("'dependsOn' must be an array.");
+            }
+
+            return array.Select(d => ConfigJson.ReadString(d, "dependsOn")).Where(d => d != null).ToList();
+        }
+
+        /// <summary>
+        /// Detect the schema version of the contents of a patches.json file.
+        /// </summary>
+        /// <param name="json">Contents of a patches.json file.</param>
+        /// <returns>The schema version, or Unknown if it cannot be detected.</returns>
+        public SchemaMapper.PatchesSchemaVersionEnum DetectSchemaVersion(string json)
+        {
+            return DetectSchemaVersion(ConfigJson.ParseObject(json, _filePath));
+        }
+
+        private SchemaMapper.PatchesSchemaVersionEnum DetectSchemaVersion(JsonObject o)
         {
             //todo: write unit tests for this method and SchemaMapper class
             var mapper = new SchemaMapper();
             var rc = SchemaMapper.PatchesSchemaVersionEnum.Unknown;
-            var schemaVersionProperty = o.Property("schema");
 
-            if (schemaVersionProperty != null)
+            if (o.ContainsKey("schema"))
             {
-                if (!string.IsNullOrWhiteSpace((string)schemaVersionProperty.Value))
+                var schemaStr = ConfigJson.ReadString(o["schema"], "schema");
+                if (!string.IsNullOrWhiteSpace(schemaStr))
                 {
-                    string schemaStr = (string)schemaVersionProperty.Value;
                     rc = mapper.MapSchemaVersion(schemaStr);
                 }
             }
             else
             {
                 // if no schemaVersion property then try to detect if v1 by checking other properties
-                var patchesProperty = o.Property("patches");
-
-                if (patchesProperty != null)
+                if (o.ContainsKey("patches"))
                 {
                     rc = SchemaMapper.PatchesSchemaVersionEnum.DbPatchV1;
                 }
@@ -158,79 +243,96 @@ namespace Ormico.DbPatchManager.Logic
         /// <param name="buildConfiguration"></param>
         public void Write(DatabaseBuildConfiguration buildConfiguration)
         {
-            JObject data;
-
+            JsonObject local = null;
             if (_io.File.Exists(_localFilePath))
             {
-                var localO = (Newtonsoft.Json.Linq.JObject)Newtonsoft.Json.Linq.JToken.Parse(_io.File.ReadAllText(_localFilePath));
-                data = new JObject();
-
-                //todo: find a way to do this that isn't manual. can you loop over all values in buildConfiguration?
-                if (localO["DatabaseType"] == null && buildConfiguration.DatabaseType != null)
-                {
-                    data["DatabaseType"] = buildConfiguration.DatabaseType;
-                }
-
-                if (localO["ConnectionString"] == null && buildConfiguration.ConnectionString != null)
-                {
-                    data["ConnectionString"] = buildConfiguration.ConnectionString;
-                }
-
-                if (localO["CodeFolder"] == null && buildConfiguration.CodeFolder != null)
-                {
-                    data["CodeFolder"] = buildConfiguration.CodeFolder;
-                }
-
-                if (localO["CodeFiles"] == null && buildConfiguration.CodeFiles != null)
-                {
-                    data["CodeFiles"] = JArray.FromObject(buildConfiguration.CodeFiles);
-                }
-
-                if (localO["PatchFolder"] == null && buildConfiguration.PatchFolder != null)
-                {
-                    data["PatchFolder"] = buildConfiguration.PatchFolder;
-                }
-
-                if (localO["Options"] == null && buildConfiguration.Options != null)
-                {
-                    data["Options"] = JArray.FromObject(buildConfiguration.Options);
-                }
-
-                if (localO["patches"] == null && buildConfiguration.patches != null)
-                {
-                    data["patches"] = JArray.FromObject(from p in buildConfiguration.patches
-                                      select new
-                                      {
-                                        id = p.Id,
-                                        dependsOn = p.DependsOn != null ? (from d in p.DependsOn
-                                            select d.Id) : null
-                                      });
-                }
+                local = ConfigJson.ParseObject(_io.File.ReadAllText(_localFilePath), _localFilePath);
             }
-            else
-            {
-                data = JObject.FromObject(new
-                {
-                    DatabaseType = buildConfiguration.DatabaseType,
-                    ConnectionString = buildConfiguration.ConnectionString,
-                    CodeFolder = buildConfiguration.CodeFolder,
-                    CodeFiles = buildConfiguration.CodeFiles,
-                    PatchFolder = buildConfiguration.PatchFolder,
-                    Options = buildConfiguration.Options,
-                    patches = from p in buildConfiguration.patches
-                              select new
-                              {
-                                  id = p.Id,
-                                  dependsOn = p.DependsOn != null?(from d in p.DependsOn.Distinct(new PatchComparer())
-                                              select d.Id):null
-                              }
-                });
-            }
+
+            var data = BuildDocument(buildConfiguration, local);
 
             // write all text creates the file if it doesn't exist
             // but it also truncates the file before writing if it does exist
             // so there will be no data left over from the original contents.
-            _io.File.WriteAllText(_filePath, data.ToString());
+            _io.File.WriteAllText(_filePath, ConfigJson.Serialize(data));
+        }
+
+        /// <summary>
+        /// Create the contents of the main file.
+        /// </summary>
+        /// <param name="config">Configuration to write.</param>
+        /// <param name="local">Contents of the local file, or null if there is no local file.</param>
+        private static JsonObject BuildDocument(DatabaseBuildConfiguration config, JsonObject local)
+        {
+            var rc = new JsonObject();
+
+            void Add(string name, JsonNode value)
+            {
+                if (local == null || (!local.ContainsKey(name) && value != null))
+                {
+                    rc[name] = value;
+                }
+            }
+
+            //todo: find a way to do this that isn't manual. can you loop over all values in buildConfiguration?
+            Add("DatabaseType", config.DatabaseType);
+            Add("ConnectionString", config.ConnectionString);
+            Add("CodeFolder", config.CodeFolder);
+            Add("CodeFiles", ToJsonArray(config.CodeFiles));
+            Add("PatchFolder", config.PatchFolder);
+            Add("Options", ToJsonObject(config.Options));
+            Add("patches", ToJsonArray(config.patches));
+
+            return rc;
+        }
+
+        private static JsonArray ToJsonArray(IEnumerable<string> values)
+        {
+            if (values == null)
+            {
+                return null;
+            }
+
+            var rc = new JsonArray();
+            foreach (var value in values)
+            {
+                rc.Add(JsonValue.Create(value));
+            }
+            return rc;
+        }
+
+        private static JsonObject ToJsonObject(Dictionary<string, string> values)
+        {
+            if (values == null)
+            {
+                return null;
+            }
+
+            var rc = new JsonObject();
+            foreach (var kvp in values)
+            {
+                rc[kvp.Key] = kvp.Value;
+            }
+            return rc;
+        }
+
+        private static JsonArray ToJsonArray(IEnumerable<Patch> patches)
+        {
+            if (patches == null)
+            {
+                return null;
+            }
+
+            var rc = new JsonArray();
+            foreach (var p in patches.Distinct(new PatchComparer()))
+            {
+                rc.Add(new JsonObject
+                {
+                    ["id"] = p.Id,
+                    ["dependsOn"] = ToJsonArray(p.DependsOn?.Distinct(new PatchComparer()).Select(d => d.Id))
+                });
+            }
+            return rc;
         }
     }
 }

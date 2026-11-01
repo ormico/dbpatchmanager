@@ -1,12 +1,11 @@
-﻿using Newtonsoft.Json;
-using Ormico.DbPatchManager.Common;
+﻿using Ormico.DbPatchManager.Common;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.IO.Abstractions;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Ormico.DbPatchManager.Logic
 {
@@ -16,10 +15,19 @@ namespace Ormico.DbPatchManager.Logic
         /// <summary>
         /// Use System.IO.Abstraction to make testing easier.
         /// </summary>
-        FileSystem _io = new FileSystem();
+        IFileSystem _io;
 
         string _fileName;
         TestDb _testDb;
+
+        public TestDatabase() : this(new FileSystem())
+        {
+        }
+
+        internal TestDatabase(IFileSystem fileSystem)
+        {
+            _io = fileSystem;
+        }
 
         public void Connect(DatabaseOptions Options)
         {
@@ -70,7 +78,7 @@ namespace Ormico.DbPatchManager.Logic
         {
             if(_io.File.Exists(_fileName))
             {
-                _testDb = JsonConvert.DeserializeObject<TestDb>(_io.File.ReadAllText(_fileName));
+                _testDb = JsonSerializer.Deserialize<TestDb>(_io.File.ReadAllText(_fileName));
             }
             else
             {
@@ -80,7 +88,7 @@ namespace Ormico.DbPatchManager.Logic
 
         void Save()
         {
-            _io.File.WriteAllText(_fileName, JsonConvert.SerializeObject(_testDb, Formatting.Indented));
+            _io.File.WriteAllText(_fileName, JsonSerializer.Serialize(_testDb, new JsonSerializerOptions { WriteIndented = true }));
         }
 
         public void ExecuteProgrammabilityScript(string commandText)
@@ -96,8 +104,10 @@ namespace Ormico.DbPatchManager.Logic
                 DdlLog = new List<string>();
             }
 
+            [JsonInclude]
             public List<InstalledPatchInfo> InstalledPatches { get; protected set; }
 
+            [JsonInclude]
             public List<string> DdlLog { get; protected set; }
         }
     }
