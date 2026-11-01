@@ -94,9 +94,7 @@ namespace Ormico.DbPatchManager.Logic.Tests
             });
             var bcw = new BuildConfigurationWriter(@"\databaseproj\patches.json", @"\databaseproj\patches.local.json", mockFileSystem);
 
-            using var doc = System.Text.Json.JsonDocument.Parse(patchesJsonWSchema);
-
-            var result = bcw.DetectSchemaVersion(doc.RootElement.Clone());
+            var result = bcw.DetectSchemaVersion(patchesJsonWSchema);
 
             Assert.That(result, Is.EqualTo(SchemaMapper.PatchesSchemaVersionEnum.DbPatchV1));
         }
@@ -111,9 +109,7 @@ namespace Ormico.DbPatchManager.Logic.Tests
             });
             var bcw = new BuildConfigurationWriter(@"\databaseproj\patches.json", @"\databaseproj\patches.local.json", mockFileSystem);
 
-            using var doc = System.Text.Json.JsonDocument.Parse(patchesJsonWUnknownSchema);
-
-            var result = bcw.DetectSchemaVersion(doc.RootElement.Clone());
+            var result = bcw.DetectSchemaVersion(patchesJsonWUnknownSchema);
 
             Assert.That(result, Is.EqualTo(SchemaMapper.PatchesSchemaVersionEnum.Unknown));
         }
@@ -128,9 +124,7 @@ namespace Ormico.DbPatchManager.Logic.Tests
             });
             var bcw = new BuildConfigurationWriter(@"\databaseproj\patches.json", @"\databaseproj\patches.local.json", mockFileSystem);
 
-            using var doc = System.Text.Json.JsonDocument.Parse(patchesJson);
-
-            var result = bcw.DetectSchemaVersion(doc.RootElement.Clone());
+            var result = bcw.DetectSchemaVersion(patchesJson);
 
             Assert.That(result, Is.EqualTo(SchemaMapper.PatchesSchemaVersionEnum.DbPatchV1));
         }
@@ -145,9 +139,7 @@ namespace Ormico.DbPatchManager.Logic.Tests
             });
             var bcw = new BuildConfigurationWriter(@"\databaseproj\patches.json", @"\databaseproj\patches.local.json", mockFileSystem);
 
-            using var doc = System.Text.Json.JsonDocument.Parse(shortPatchesJson);
-
-            var result = bcw.DetectSchemaVersion(doc.RootElement.Clone());
+            var result = bcw.DetectSchemaVersion(shortPatchesJson);
 
             Assert.That(result, Is.EqualTo(SchemaMapper.PatchesSchemaVersionEnum.Unknown));
 
@@ -230,6 +222,92 @@ namespace Ormico.DbPatchManager.Logic.Tests
             Assert.That(result.PatchFolder, Is.EqualTo("Patches"));
             Assert.That(result.ConnectionString, Is.EqualTo("Server=devServer;Database=DevDataBase;Trusted_Connection=True;"));
             Assert.That(result.patches.Count, Is.EqualTo(1));
+        }
+
+        const string MainPath = @"\databaseproj\patches.json";
+        const string LocalPath = @"\databaseproj\patches.local.json";
+
+        static BuildConfigurationWriter WriterFor(string mainJson, string localJson = null)
+        {
+            var files = new Dictionary<string, MockFileData> { { MainPath, new MockFileData(mainJson) } };
+            if (localJson != null)
+            {
+                files.Add(LocalPath, new MockFileData(localJson));
+            }
+            return new BuildConfigurationWriter(MainPath, LocalPath, new MockFileSystem(files));
+        }
+
+        [Test]
+        public void Read_WhenOptionsAndDependsOnContainNonStrings_ConvertsToStrings()
+        {
+            var bcw = WriterFor(@"{""patches"":[{""id"":""1"",""dependsOn"":[]},{""id"":""2"",""dependsOn"":[1]}],""Options"":{""CommandTimeout"":30,""Flag"":true}}");
+
+            var result = bcw.Read();
+
+            Assert.That(result.Options["CommandTimeout"], Is.EqualTo("30"));
+            Assert.That(result.Options["Flag"], Is.EqualTo("true"));
+            Assert.That(result.patches[1].DependsOn[0], Is.SameAs(result.patches[0]));
+        }
+
+        [Test]
+        public void Read_WithDependencyChain_PopulatesDependsOnAndChildren()
+        {
+            var bcw = WriterFor(@"{""patches"":[
+                {""id"":""a"",""dependsOn"":[]},
+                {""id"":""b"",""dependsOn"":[""a""]},
+                {""id"":""c"",""dependsOn"":[""b""]},
+                {""id"":""d"",""dependsOn"":[""a"",""c""]}]}");
+
+            var result = bcw.Read();
+
+            var a = result.patches[0];
+            var b = result.patches[1];
+            var c = result.patches[2];
+            var d = result.patches[3];
+            Assert.That(a.Children, Is.EquivalentTo(new[] { b, d }));
+            Assert.That(c.DependsOn, Is.EqualTo(new[] { b }));
+            Assert.That(d.DependsOn, Is.EquivalentTo(new[] { a, c }));
+            Assert.That(b.Children[0], Is.SameAs(c));
+            Assert.That(d.DependsOn[0], Is.SameAs(a));
+        }
+
+        [Test]
+        public void Read_WithManyPatches_CompletesQuickly()
+        {
+            const int count = 5000;
+            var items = Enumerable.Range(0, count).Select(i =>
+                i == 0 ? @"{""id"":""p0"",""dependsOn"":[]}" : $@"{{""id"":""p{i}"",""dependsOn"":[""p{i - 1}""]}}");
+            var bcw = WriterFor(@"{""patches"":[" + string.Join(",", items) + "]}");
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var result = bcw.Read();
+            sw.Stop();
+
+            Assert.That(sw.Elapsed, Is.LessThan(TimeSpan.FromSeconds(2)));
+            Assert.That(result.patches[count - 1].DependsOn[0].Id, Is.EqualTo($"p{count - 2}"));
+        }
+
+        [Test]
+        public void Read_WhenOptionsIsArray_ThrowsDbPatchManagerException()
+        {
+            var bcw = WriterFor(@"{""patches"":[],""Options"":[{""Key"":""a"",""Value"":""b""}]}");
+
+            var ex = Assert.Throws<Ormico.DbPatchManager.Common.DbPatchManagerException>(() => bcw.Read());
+
+            Assert.That(ex.Message, Does.Contain("Options"));
+        }
+
+        [Test]
+        public void Read_WhenLocalFileHasComments_Merges()
+        {
+            var bcw = WriterFor(patchesJson, @"{
+  // dev only
+  ""ConnectionString"": ""Server=dev;"",
+}");
+
+            var result = bcw.Read();
+
+            Assert.That(result.ConnectionString, Is.EqualTo("Server=dev;"));
         }
     }
 }

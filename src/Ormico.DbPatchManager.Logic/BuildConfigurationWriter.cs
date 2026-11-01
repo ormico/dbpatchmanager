@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ormico.DbPatchManager.Common;
 
 namespace Ormico.DbPatchManager.Logic
@@ -51,73 +52,6 @@ namespace Ormico.DbPatchManager.Logic
         /// </summary>
         string _localFilePath;
 
-        private static JsonElement MergeJson(JsonElement main, JsonElement local)
-        {
-            using var mainDoc = JsonDocument.Parse(main.GetRawText());
-            using var localDoc = JsonDocument.Parse(local.GetRawText());
-            return MergeElements(mainDoc.RootElement, localDoc.RootElement);
-        }
-
-        private static JsonElement? TryGetProperty(JsonElement element, string propertyName)
-        {
-            if (element.TryGetProperty(propertyName, out var prop))
-                return prop;
-            return null;
-        }
-
-        private static JsonElement MergeElements(JsonElement main, JsonElement local)
-        {
-            if (main.ValueKind == JsonValueKind.Object && local.ValueKind == JsonValueKind.Object)
-            {
-                var merged = new Dictionary<string, string>();
-                
-                foreach (var prop in main.EnumerateObject())
-                {
-                    var localProp = TryGetProperty(local, prop.Name);
-                    if (localProp.HasValue && localProp.Value.ValueKind != JsonValueKind.Null)
-                    {
-                        merged[prop.Name] = MergeElements(prop.Value, localProp.Value).GetRawText();
-                    }
-                    else
-                    {
-                        merged[prop.Name] = prop.Value.GetRawText();
-                    }
-                }
-
-                foreach (var prop in local.EnumerateObject())
-                {
-                    if (!merged.ContainsKey(prop.Name))
-                    {
-                        merged[prop.Name] = prop.Value.GetRawText();
-                    }
-                }
-
-                return JsonDocument.Parse("{" + string.Join(",", merged.Select(kvp => $"\"{kvp.Key}\":{kvp.Value}")) + "}").RootElement;
-            }
-
-            if (main.ValueKind == JsonValueKind.Array && local.ValueKind == JsonValueKind.Array)
-            {
-                var mainItems = new List<string>();
-                foreach (var item in main.EnumerateArray())
-                    mainItems.Add(item.GetRawText());
-
-                var seen = new HashSet<string>(mainItems);
-                foreach (var item in local.EnumerateArray())
-                {
-                    var raw = item.GetRawText();
-                    if (!seen.Contains(raw))
-                    {
-                        seen.Add(raw);
-                        mainItems.Add(raw);
-                    }
-                }
-
-                return JsonDocument.Parse("[" + string.Join(",", mainItems) + "]").RootElement;
-            }
-
-            return local.ValueKind != JsonValueKind.Null ? local : main;
-        }
-
         /// <summary>
         /// Read DatabaseBuildConfiguration data from file path passed to constructor.
         /// </summary>
@@ -127,8 +61,7 @@ namespace Ormico.DbPatchManager.Logic
             DatabaseBuildConfiguration rc = null;
             if(_io.File.Exists(_filePath))
             {
-                using var mainDoc = JsonDocument.Parse(_io.File.ReadAllText(_filePath));
-                var o = mainDoc.RootElement.Clone();
+                var o = ConfigJson.ParseObject(_io.File.ReadAllText(_filePath), _filePath);
 
                 var schemaVer = DetectSchemaVersion(o);
                 if (schemaVer == SchemaMapper.PatchesSchemaVersionEnum.Unknown)
@@ -136,110 +69,21 @@ namespace Ormico.DbPatchManager.Logic
 
                 if (_io.File.Exists(_localFilePath))
                 {
-                    using var localDoc = JsonDocument.Parse(_io.File.ReadAllText(_localFilePath));
-                    o = MergeElements(o, localDoc.RootElement);
+                    ConfigJson.Merge(o, ConfigJson.ParseObject(_io.File.ReadAllText(_localFilePath), _localFilePath));
                 }
 
                 rc = new DatabaseBuildConfiguration();
-                
-                var codeFolderProp = TryGetProperty(o, "CodeFolder");
-                rc.CodeFolder = codeFolderProp?.GetString();
-
-                var codeFilesProp = TryGetProperty(o, "CodeFiles");
-                rc.CodeFiles = codeFilesProp?.Deserialize<List<string>>(_jsonOptions) ?? new List<string>();
-
-                var connStringProp = TryGetProperty(o, "ConnectionString");
-                rc.ConnectionString = connStringProp?.GetString();
-
-                var dbTypeProp = TryGetProperty(o, "DatabaseType");
-                rc.DatabaseType = dbTypeProp?.GetString();
-
-                var patchFolderProp = TryGetProperty(o, "PatchFolder");
-                rc.PatchFolder = patchFolderProp?.GetString();
+                rc.CodeFolder = ConfigJson.ReadString(o["CodeFolder"], "CodeFolder");
+                rc.CodeFiles = ReadCodeFiles(o["CodeFiles"]);
+                rc.ConnectionString = ConfigJson.ReadString(o["ConnectionString"], "ConnectionString");
+                rc.DatabaseType = ConfigJson.ReadString(o["DatabaseType"], "DatabaseType");
+                rc.PatchFolder = ConfigJson.ReadString(o["PatchFolder"], "PatchFolder");
 
                 // options specific to a database plugin
-                var optionsProp = TryGetProperty(o, "Options");
-                if (optionsProp.HasValue)
-                {
-                    rc.Options = optionsProp.Value.Deserialize<Dictionary<string, string>>(_jsonOptions);
-                }
+                rc.Options = ReadOptions(o["Options"]);
 
                 // populate patch list
-                var patchesProp = TryGetProperty(o, "patches");
-                if (!patchesProp.HasValue || patchesProp.Value.ValueKind == JsonValueKind.Null)
-                {
-                    rc.patches = new List<Patch>();
-                }
-                else
-                {   
-                    var patchesArray = patchesProp.Value;
-                    var patches = new List<Patch>();
-                    
-                    foreach (var patchElem in patchesArray.EnumerateArray())
-                    {
-                        var idProp = TryGetProperty(patchElem, "id");
-                        patches.Add(new Patch()
-                        {
-                            Id = idProp?.GetString()
-                        });
-                    }
-
-                    // populate DependsOn
-                    foreach(var p in patches)
-                    {
-                        var dependsOnList = new List<Patch>();
-                        
-                        for (int i = 0; i < patchesArray.GetArrayLength(); i++)
-                        {
-                            var patchObj = patchesArray[i];
-                            var idProp = TryGetProperty(patchObj, "id");
-                            var curId = idProp?.GetString();
-
-                            if (curId != p.Id) continue;
-
-                            var dependsOnProp = TryGetProperty(patchObj, "dependsOn");
-                            if (dependsOnProp.HasValue && dependsOnProp.Value.ValueKind == JsonValueKind.Array)
-                            {
-                                foreach (var depElem in dependsOnProp.Value.EnumerateArray())
-                                {
-                                    var depId = depElem.GetString();
-                                    var matched = patches.Where(a => a.Id == depId).Distinct(new PatchComparer()).ToList();
-                                    dependsOnList.AddRange(matched);
-                                }
-                            }
-                        }
-
-                        p.DependsOn = dependsOnList.Distinct(new PatchComparer()).ToList();
-
-                        // populate Children
-                        var childrenList = new List<Patch>();
-                        
-                        for (int i = 0; i < patchesArray.GetArrayLength(); i++)
-                        {
-                            var patchObj = patchesArray[i];
-                            var idProp = TryGetProperty(patchObj, "id");
-                            var curId = idProp?.GetString();
-
-                            var dependsOnProp = TryGetProperty(patchObj, "dependsOn");
-                            if (dependsOnProp.HasValue && dependsOnProp.Value.ValueKind == JsonValueKind.Array)
-                            {
-                                foreach (var depElem in dependsOnProp.Value.EnumerateArray())
-                                {
-                                    var depId = depElem.GetString();
-                                    if (depId == p.Id)
-                                    {
-                                        var matched = patches.Where(a => a.Id == curId).Distinct(new PatchComparer()).ToList();
-                                        childrenList.AddRange(matched);
-                                    }
-                                }
-                            }
-                        }
-
-                        p.Children = childrenList.Distinct(new PatchComparer()).ToList();
-                    }
-
-                    rc.patches = patches;
-                }
+                rc.patches = ReadPatches(o["patches"]);
             }
             else
             {
@@ -248,15 +92,138 @@ namespace Ormico.DbPatchManager.Logic
             return rc;
         }
 
-        public SchemaMapper.PatchesSchemaVersionEnum DetectSchemaVersion(JsonElement o)
+        private static List<string> ReadCodeFiles(JsonNode node)
+        {
+            if (node == null)
+            {
+                return new List<string>();
+            }
+
+            if (node is not JsonArray array)
+            {
+                throw new DbPatchManagerException("'CodeFiles' must be an array.");
+            }
+
+            return array.Select(f => ConfigJson.ReadString(f, "CodeFiles")).ToList();
+        }
+
+        private static Dictionary<string, string> ReadOptions(JsonNode node)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            if (node is not JsonObject options)
+            {
+                throw new DbPatchManagerException("'Options' must be an object.");
+            }
+
+            return options.ToDictionary(p => p.Key, p => ConfigJson.ReadString(p.Value, p.Key));
+        }
+
+        private static List<Patch> ReadPatches(JsonNode node)
+        {
+            var patches = new List<Patch>();
+            if (node == null)
+            {
+                return patches;
+            }
+
+            if (node is not JsonArray array)
+            {
+                throw new DbPatchManagerException("'patches' must be an array.");
+            }
+
+            // if an id is repeated then the first Patch is the one other patches link to
+            var patchesById = new Dictionary<string, Patch>(StringComparer.Ordinal);
+            var dependsOnById = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+            foreach (var item in array)
+            {
+                if (item is not JsonObject patchObject)
+                {
+                    throw new DbPatchManagerException("'patches' must contain only objects.");
+                }
+
+                var patch = new Patch()
+                {
+                    Id = ConfigJson.ReadString(patchObject["id"], "id")
+                };
+                patches.Add(patch);
+
+                if (patch.Id != null)
+                {
+                    patchesById.TryAdd(patch.Id, patch);
+                    dependsOnById.TryAdd(patch.Id, new List<string>());
+                    dependsOnById[patch.Id].AddRange(ReadDependsOn(patchObject["dependsOn"]));
+                }
+            }
+
+            var childrenById = new Dictionary<string, List<Patch>>(StringComparer.Ordinal);
+            foreach (var (id, dependsOn) in dependsOnById)
+            {
+                foreach (var dependsOnId in dependsOn.Where(patchesById.ContainsKey))
+                {
+                    childrenById.TryAdd(dependsOnId, new List<Patch>());
+                    childrenById[dependsOnId].Add(patchesById[id]);
+                }
+            }
+
+            foreach (var p in patches)
+            {
+                p.DependsOn = new List<Patch>();
+                p.Children = new List<Patch>();
+
+                if (p.Id != null)
+                {
+                    p.DependsOn = dependsOnById[p.Id].Where(patchesById.ContainsKey).Select(d => patchesById[d])
+                        .Distinct(new PatchComparer()).ToList();
+
+                    if (childrenById.TryGetValue(p.Id, out var children))
+                    {
+                        p.Children = children.Distinct(new PatchComparer()).ToList();
+                    }
+                }
+            }
+
+            return patches;
+        }
+
+        private static List<string> ReadDependsOn(JsonNode node)
+        {
+            if (node == null)
+            {
+                return new List<string>();
+            }
+
+            if (node is not JsonArray array)
+            {
+                throw new DbPatchManagerException("'dependsOn' must be an array.");
+            }
+
+            return array.Select(d => ConfigJson.ReadString(d, "dependsOn")).Where(d => d != null).ToList();
+        }
+
+        /// <summary>
+        /// Detect the schema version of the contents of a patches.json file.
+        /// </summary>
+        /// <param name="json">Contents of a patches.json file.</param>
+        /// <returns>The schema version, or Unknown if it cannot be detected.</returns>
+        public SchemaMapper.PatchesSchemaVersionEnum DetectSchemaVersion(string json)
+        {
+            return DetectSchemaVersion(ConfigJson.ParseObject(json, _filePath));
+        }
+
+        private SchemaMapper.PatchesSchemaVersionEnum DetectSchemaVersion(JsonObject o)
         {
             //todo: write unit tests for this method and SchemaMapper class
             var mapper = new SchemaMapper();
             var rc = SchemaMapper.PatchesSchemaVersionEnum.Unknown;
-            
-            if (o.TryGetProperty("schema", out var schemaVersionProperty))
+
+            if (o.ContainsKey("schema"))
             {
-                var schemaStr = schemaVersionProperty.GetString();
+                var schemaStr = ConfigJson.ReadString(o["schema"], "schema");
                 if (!string.IsNullOrWhiteSpace(schemaStr))
                 {
                     rc = mapper.MapSchemaVersion(schemaStr);
@@ -265,7 +232,7 @@ namespace Ormico.DbPatchManager.Logic
             else
             {
                 // if no schemaVersion property then try to detect if v1 by checking other properties
-                if (o.TryGetProperty("patches", out var patchesProperty))
+                if (o.ContainsKey("patches"))
                 {
                     rc = SchemaMapper.PatchesSchemaVersionEnum.DbPatchV1;
                 }
