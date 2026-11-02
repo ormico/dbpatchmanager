@@ -14,11 +14,11 @@ Changes since v2.1.2.
 - Replaced Newtonsoft.Json with System.Text.Json. The Logic package no longer depends on Newtonsoft.Json.
 - `BuildConfigurationWriter.DetectSchemaVersion` now takes the file contents as a `string`.
 - Config files must be standard JSON, except that comments and trailing commas are still accepted. Single-quoted strings, unquoted property names and `NaN` are rejected.
+- A `dependsOn` value that is not an array is now an error.
+- `Options` booleans now read as `"true"` and `"false"` instead of `"True"` and `"False"`, and numbers keep the text used in the file.
 
 ### Changed
 
-- A `dependsOn` value that is not an array is now an error.
-- `Options` booleans now read as `"true"` and `"false"` instead of `"True"` and `"False"`, and numbers keep the text used in the file.
 - Upgraded to .NET 8.
 
 ### Added
