@@ -3,20 +3,22 @@
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Version numbers come from Git tags through GitVersion. Older versions are listed on the
-[releases page](https://github.com/ormico/dbpatchmanager/releases).
+Older versions are listed on the [releases page](https://github.com/ormico/dbpatchmanager/releases).
 
 ## [Unreleased]
 
 Changes since v2.1.2.
 
-### Changed
+### Upgrade notes
 
-- **Breaking:** Replaced Newtonsoft.Json with System.Text.Json. The Logic package no longer depends on Newtonsoft.Json.
-- **Breaking:** `BuildConfigurationWriter.DetectSchemaVersion` now takes the file contents as a `string`.
-- **Breaking:** Config files must be standard JSON, except that comments and trailing commas are still accepted. Single-quoted strings, unquoted property names and `NaN` are rejected.
+- Replaced Newtonsoft.Json with System.Text.Json. The Logic package no longer depends on Newtonsoft.Json.
+- `BuildConfigurationWriter.DetectSchemaVersion` now takes the file contents as a `string`.
+- Config files must be standard JSON, except that comments and trailing commas are still accepted. Single-quoted strings, unquoted property names and `NaN` are rejected.
 - A `dependsOn` value that is not an array is now an error.
 - `Options` booleans now read as `"true"` and `"false"` instead of `"True"` and `"False"`, and numbers keep the text used in the file.
+
+### Changed
+
 - Upgraded to .NET 8.
 
 ### Added
